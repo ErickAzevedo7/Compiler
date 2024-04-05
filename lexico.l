@@ -21,6 +21,8 @@ REAL {NUM}+("."{NUM}+)?
 
 "main"      {return TK_MAIN;}
 
+"int"		{return TK_TIPO_INT;}
+
 [(){}[\];,]	{ return *yytext; }
 
 [+\-*/]		{ return *yytext; }
