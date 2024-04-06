@@ -1,6 +1,7 @@
 %{
-    #include <string>
-    %}
+#include <string>
+
+%}
 
 ESPACE [ \t]
 DIGIT [0-9]
