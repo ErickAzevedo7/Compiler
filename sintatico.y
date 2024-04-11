@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <stack>
+#include <list>
 
 #define YYSTYPE atributos
 
@@ -21,8 +23,8 @@ string gentempcode();
 %}
 
 %token TK_NUM
-%token TK_MAIN TK_ID TK_TIPO_INT
-%token TK_FIM TK_ERROR
+%token TK_MAIN TK_ID TK_TYPE_INT
+%token TK_END TK_ERROR
 
 %start S
 
@@ -30,9 +32,9 @@ string gentempcode();
 
 %%
 
-S 			: TK_TIPO_INT TK_MAIN '(' ')' BLOCO
+S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCO
 			{
-				string codigo = "/*Compilador FOCA*/\n"
+				string codigo = "/*Compilador AERITH*/\n"
 								"#include <iostream>\n"
 								"#include<string.h>\n"
 								"#include<stdio.h>\n"
