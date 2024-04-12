@@ -11,16 +11,26 @@ using namespace std;
 
 int var_temp_qnt;
 
+enum types{
+	t_int = 0,
+	t_float = 1,
+};
+
 struct attributes
 {
 	string label;
 	string translation;
-	string type;
+	types type;
 };
 
-list <attributes> symbolTable;
+typedef struct{
+	string name;
+	types type;
+}symbol;
 
-stack< list<attributes> > scope;
+list <symbol> symbolTable;
+
+stack< list<symbol> > scope;
 
 int yylex(void);
 void yyerror(string);
@@ -39,10 +49,10 @@ string gentempcode();
 
 S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 			{
-				string code = "/*Compilador AERITH*/\n"
+				string code = "/*AERITH Compiler*/\n"
 								"#include <iostream>\n"
-								"#include<string.h>\n"
-								"#include<stdio.h>\n"
+								"#include <string.h>\n"
+								"#include <stdio.h>\n"
 								"int main(void) {\n";
 								
 				code += $5.translation;
@@ -73,6 +83,14 @@ COMANDS	: COMAND COMANDS
 COMAND 	: E ';'
 			{
 				$$ = $1;
+			}
+			| TK_TYPE_INT TK_ID ';'
+			{
+				$$.type = t_int;
+				$$.label = "";
+				$$.translation = "";
+
+
 			}
 			;
 
@@ -118,18 +136,16 @@ string gentempcode()
 
 int main(int argc, char* argv[])
 {
-	attributes test;
+	symbol test;
 
-	test.label = "t1";
-	test.translation = "t1 = 1";
-	test.type = "int";
+	test.name = "a";
+	test.type = t_int;
 
 	symbolTable.push_back(test);
 	scope.push(symbolTable);
 
 	for(auto it = scope.top().begin(); it != scope.top().end(); ++it){
-		cout << it->label << endl;
-		cout << it->translation << endl;
+		cout << it->name << endl;
 		cout << it->type << endl;
 	}
 
