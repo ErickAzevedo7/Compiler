@@ -5,17 +5,22 @@
 #include <stack>
 #include <list>
 
-#define YYSTYPE atributos
+#define YYSTYPE attributes
 
 using namespace std;
 
 int var_temp_qnt;
 
-struct atributos
+struct attributes
 {
 	string label;
-	string traducao;
+	string translation;
+	string type;
 };
+
+list <attributes> symbolTable;
+
+stack< list<attributes> > scope;
 
 int yylex(void);
 void yyerror(string);
@@ -32,40 +37,40 @@ string gentempcode();
 
 %%
 
-S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCO
+S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 			{
-				string codigo = "/*Compilador AERITH*/\n"
+				string code = "/*Compilador AERITH*/\n"
 								"#include <iostream>\n"
 								"#include<string.h>\n"
 								"#include<stdio.h>\n"
 								"int main(void) {\n";
 								
-				codigo += $5.traducao;
+				code += $5.translation;
 								
-				codigo += 	"\treturn 0;"
+				code += 	"\treturn 0;"
 							"\n}";
 
-				cout << codigo << endl;
+				cout << code << endl;
 			}
 			;
 
-BLOCO		: '{' COMANDOS '}'
+BLOCK		: '{' COMANDS '}'
 			{
-				$$.traducao = $2.traducao;
+				$$.translation = $2.translation;
 			}
 			;
 
-COMANDOS	: COMANDO COMANDOS
+COMANDS	: COMAND COMANDS
 			{
-				$$.traducao = $1.traducao + $2.traducao;
+				$$.translation = $1.translation + $2.translation;
 			}
 			|
 			{
-				$$.traducao = "";
+				$$.translation = "";
 			}
 			;
 
-COMANDO 	: E ';'
+COMAND 	: E ';'
 			{
 				$$ = $1;
 			}
@@ -74,28 +79,28 @@ COMANDO 	: E ';'
 E 			: E '+' E
 			{
 				$$.label = gentempcode();
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + 
+				$$.translation = $1.translation + $3.translation + "\t" + $$.label + 
 					" = " + $1.label + " + " + $3.label + ";\n";
 			}
 			| E '-' E
 			{
 				$$.label = gentempcode();
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + 
+				$$.translation = $1.translation + $3.translation + "\t" + $$.label + 
 					" = " + $1.label + " - " + $3.label + ";\n";
 			}
 			| TK_ID '=' E
 			{
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $1.label + " = " + $3.label + ";\n";
+				$$.translation = $1.translation + $3.translation + "\t" + $1.label + " = " + $3.label + ";\n";
 			}
 			| TK_NUM
 			{
 				$$.label = gentempcode();
-				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 			}
 			| TK_ID
 			{
 				$$.label = gentempcode();
-				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 			}
 			;
 
@@ -113,6 +118,21 @@ string gentempcode()
 
 int main(int argc, char* argv[])
 {
+	attributes test;
+
+	test.label = "t1";
+	test.translation = "t1 = 1";
+	test.type = "int";
+
+	symbolTable.push_back(test);
+	scope.push(symbolTable);
+
+	for(auto it = scope.top().begin(); it != scope.top().end(); ++it){
+		cout << it->label << endl;
+		cout << it->translation << endl;
+		cout << it->type << endl;
+	}
+
 	var_temp_qnt = 0;
 
 	yyparse();
