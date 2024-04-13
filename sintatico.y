@@ -28,12 +28,14 @@ typedef struct{
 	types type;
 }symbol;
 
-list <symbol> symbolTable;
+list <symbol> global;
 
-stack< list<symbol> > scope;
+stack< list<symbol> > symbolTable;
 
 int yylex(void);
 void yyerror(string);
+bool findSymbol(symbol);
+void printScope();
 string gentempcode();
 %}
 
@@ -90,7 +92,17 @@ COMAND 	: E ';'
 				$$.label = "";
 				$$.translation = "";
 
+				symbol value;
+				value.name = $2.label;
+				value.type = t_int;
 
+				if(!findSymbol(value)){
+					symbolTable.top().push_back(value);
+
+				}
+				else{
+					yyerror("Variavel " + value.name + " ja foi declarada.");
+				}
 			}
 			;
 
@@ -99,6 +111,7 @@ E 			: E '+' E
 				$$.label = gentempcode();
 				$$.translation = $1.translation + $3.translation + "\t" + $$.label + 
 					" = " + $1.label + " + " + $3.label + ";\n";
+
 			}
 			| E '-' E
 			{
@@ -136,18 +149,10 @@ string gentempcode()
 
 int main(int argc, char* argv[])
 {
-	symbol test;
+	symbolTable.push(global);
+	list <symbol> main;
 
-	test.name = "a";
-	test.type = t_int;
-
-	symbolTable.push_back(test);
-	scope.push(symbolTable);
-
-	for(auto it = scope.top().begin(); it != scope.top().end(); ++it){
-		cout << it->name << endl;
-		cout << it->type << endl;
-	}
+	symbolTable.push(main);
 
 	var_temp_qnt = 0;
 
@@ -160,4 +165,25 @@ void yyerror(string MSG)
 {
 	cout << MSG << endl;
 	exit (0);
-}				
+}
+
+bool findSymbol(symbol variable){
+
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+		if(it->name == variable.name){
+			return true;
+		}	
+	}
+
+	return false;
+}
+
+void printScope(){
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+		cout << it->name << endl;
+		cout << it->type << endl;
+	}
+
+	return;
+}
+
