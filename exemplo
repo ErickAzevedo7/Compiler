@@ -3,4 +3,6 @@ int main()
 	int b;
 	int a;
 	int c;
+
+	c = 1;
 }

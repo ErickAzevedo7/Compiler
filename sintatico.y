@@ -35,7 +35,11 @@ stack< list<symbol> > symbolTable;
 int yylex(void);
 void yyerror(string);
 bool findSymbol(symbol);
+void insertTable(string, types);
+void existInTable(string, types);
 void printScope();
+void declareScopeVariable();
+string getEnum(types);
 string gentempcode();
 %}
 
@@ -56,8 +60,13 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 								"#include <string.h>\n"
 								"#include <stdio.h>\n"
 								"int main(void) {\n";
+
+				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+					code += "\t" + getEnum(it->type) + it->name + "\n" ;
+				}
+				
 								
-				code += $5.translation;
+				code += "\n" + $5.translation;
 								
 				code += 	"\treturn 0;"
 							"\n}";
@@ -92,17 +101,7 @@ COMAND 	: E ';'
 				$$.label = "";
 				$$.translation = "";
 
-				symbol value;
-				value.name = $2.label;
-				value.type = t_int;
-
-				if(!findSymbol(value)){
-					symbolTable.top().push_back(value);
-
-				}
-				else{
-					yyerror("Variavel " + value.name + " ja foi declarada.");
-				}
+				insertTable($2.label, $$.type);
 			}
 			;
 
@@ -122,16 +121,26 @@ E 			: E '+' E
 			| TK_ID '=' E
 			{
 				$$.translation = $1.translation + $3.translation + "\t" + $1.label + " = " + $3.label + ";\n";
+
+				existInTable($1.label, $1.type);
 			}
 			| TK_NUM
 			{
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = t_int;
+
+				insertTable($$.label, $$.type);
 			}
 			| TK_ID
 			{
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = $1.type;
+
+				existInTable($1.label, $1.type);
+
+				insertTable($$.label, $$.type);
 			}
 			;
 
@@ -187,3 +196,37 @@ void printScope(){
 	return;
 }
 
+void declareScopeVariable(){
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+		
+	}
+}
+
+string getEnum(types type){
+	if(type == t_int)
+		return "int ";
+}
+
+void insertTable(string name, types type){
+	symbol variable;
+	variable.name = name;
+	variable.type = type;
+
+	if(!findSymbol(variable)){
+		symbolTable.top().push_back(variable);
+
+	}
+	else{
+		yyerror("A Variável " + variable.name + " ja foi declarada.");
+	}
+}
+
+void existInTable(string name, types type){
+	symbol variable;
+	variable.name = name;
+	variable.type = type;
+
+	if(!findSymbol(variable)){
+		yyerror("A Variável " + variable.name + " não foi declarada");
+	}
+}
