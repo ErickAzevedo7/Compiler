@@ -2,27 +2,50 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <stack>
+#include <list>
 
-#define YYSTYPE atributos
+#define YYSTYPE attributes
 
 using namespace std;
 
 int var_temp_qnt;
 
-struct atributos
+enum types{
+	t_int = 0,
+	t_float = 1,
+};
+
+struct attributes
 {
 	string label;
-	string traducao;
+	string translation;
+	types type;
 };
+
+typedef struct{
+	string name;
+	types type;
+}symbol;
+
+list <symbol> global;
+
+stack< list<symbol> > symbolTable;
 
 int yylex(void);
 void yyerror(string);
+bool findSymbol(symbol);
+void insertTable(string, types);
+void existInTable(string, types);
+void printScope();
+void declareScopeVariable();
+string getEnum(types);
 string gentempcode();
 %}
 
 %token TK_NUM
-%token TK_MAIN TK_ID TK_TIPO_INT
-%token TK_FIM TK_ERROR
+%token TK_MAIN TK_ID TK_TYPE_INT
+%token TK_END TK_ERROR
 
 %start S
 
@@ -30,70 +53,94 @@ string gentempcode();
 
 %%
 
-S 			: TK_TIPO_INT TK_MAIN '(' ')' BLOCO
+S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 			{
-				string codigo = "/*Compilador FOCA*/\n"
+				string code = "/*AERITH Compiler*/\n"
 								"#include <iostream>\n"
-								"#include<string.h>\n"
-								"#include<stdio.h>\n"
+								"#include <string.h>\n"
+								"#include <stdio.h>\n"
 								"int main(void) {\n";
+
+				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+					code += "\t" + getEnum(it->type) + it->name + "\n" ;
+				}
+				
 								
-				codigo += $5.traducao;
+				code += "\n" + $5.translation;
 								
-				codigo += 	"\treturn 0;"
+				code += 	"\treturn 0;"
 							"\n}";
 
-				cout << codigo << endl;
+				cout << code << endl;
 			}
 			;
 
-BLOCO		: '{' COMANDOS '}'
+BLOCK		: '{' COMANDS '}'
 			{
-				$$.traducao = $2.traducao;
+				$$.translation = $2.translation;
 			}
 			;
 
-COMANDOS	: COMANDO COMANDOS
+COMANDS	: COMAND COMANDS
 			{
-				$$.traducao = $1.traducao + $2.traducao;
+				$$.translation = $1.translation + $2.translation;
 			}
 			|
 			{
-				$$.traducao = "";
+				$$.translation = "";
 			}
 			;
 
-COMANDO 	: E ';'
+COMAND 	: E ';'
 			{
 				$$ = $1;
+			}
+			| TK_TYPE_INT TK_ID ';'
+			{
+				$$.type = t_int;
+				$$.label = "";
+				$$.translation = "";
+
+				insertTable($2.label, $$.type);
 			}
 			;
 
 E 			: E '+' E
 			{
 				$$.label = gentempcode();
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + 
+				$$.translation = $1.translation + $3.translation + "\t" + $$.label + 
 					" = " + $1.label + " + " + $3.label + ";\n";
+
 			}
 			| E '-' E
 			{
 				$$.label = gentempcode();
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + 
+				$$.translation = $1.translation + $3.translation + "\t" + $$.label + 
 					" = " + $1.label + " - " + $3.label + ";\n";
 			}
 			| TK_ID '=' E
 			{
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $1.label + " = " + $3.label + ";\n";
+				$$.translation = $1.translation + $3.translation + "\t" + $1.label + " = " + $3.label + ";\n";
+
+				existInTable($1.label, $1.type);
 			}
 			| TK_NUM
 			{
 				$$.label = gentempcode();
-				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = t_int;
+
+				insertTable($$.label, $$.type);
 			}
 			| TK_ID
 			{
 				$$.label = gentempcode();
-				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = $1.type;
+
+				existInTable($1.label, $1.type);
+
+				insertTable($$.label, $$.type);
 			}
 			;
 
@@ -111,6 +158,11 @@ string gentempcode()
 
 int main(int argc, char* argv[])
 {
+	symbolTable.push(global);
+	list <symbol> main;
+
+	symbolTable.push(main);
+
 	var_temp_qnt = 0;
 
 	yyparse();
@@ -122,4 +174,59 @@ void yyerror(string MSG)
 {
 	cout << MSG << endl;
 	exit (0);
-}				
+}
+
+bool findSymbol(symbol variable){
+
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+		if(it->name == variable.name){
+			return true;
+		}	
+	}
+
+	return false;
+}
+
+void printScope(){
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+		cout << it->name << endl;
+		cout << it->type << endl;
+	}
+
+	return;
+}
+
+void declareScopeVariable(){
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+		
+	}
+}
+
+string getEnum(types type){
+	if(type == t_int)
+		return "int ";
+}
+
+void insertTable(string name, types type){
+	symbol variable;
+	variable.name = name;
+	variable.type = type;
+
+	if(!findSymbol(variable)){
+		symbolTable.top().push_back(variable);
+
+	}
+	else{
+		yyerror("A Variável " + variable.name + " ja foi declarada.");
+	}
+}
+
+void existInTable(string name, types type){
+	symbol variable;
+	variable.name = name;
+	variable.type = type;
+
+	if(!findSymbol(variable)){
+		yyerror("A Variável " + variable.name + " não foi declarada");
+	}
+}
