@@ -43,8 +43,8 @@ string getEnum(types);
 string gentempcode();
 %}
 
-%token TK_NUM
-%token TK_MAIN TK_ID TK_TYPE_INT
+%token TK_NUM TK_REAL
+%token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT
 %token TK_END TK_ERROR
 
 %start S
@@ -103,6 +103,14 @@ COMAND 	: E ';'
 
 				insertTable($2.label, $$.type);
 			}
+			| TK_TYPE_FLOAT TK_ID ';'
+			{
+				$$.type = t_float;
+				$$.label = "";
+				$$.translation = "";
+
+				insertTable($2.label, $$.type);
+			}
 			;
 
 E 			: E '+' E
@@ -139,6 +147,14 @@ E 			: E '+' E
 				$$.type = $1.type;
 
 				existInTable($1.label, $1.type);
+
+				insertTable($$.label, $$.type);
+			}
+			| TK_REAL
+			{
+				$$.label = gentempcode();
+				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = t_float;
 
 				insertTable($$.label, $$.type);
 			}
@@ -205,6 +221,8 @@ void declareScopeVariable(){
 string getEnum(types type){
 	if(type == t_int)
 		return "int ";
+	else if(type == t_float)
+		return "float ";
 }
 
 void insertTable(string name, types type){
@@ -230,3 +248,4 @@ void existInTable(string name, types type){
 		yyerror("A Variável " + variable.name + " não foi declarada");
 	}
 }
+
