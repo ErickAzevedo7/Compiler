@@ -62,7 +62,7 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 								"int main(void) {\n";
 
 				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-					code += "\t" + getEnum(it->type) + it->name + "\n" ;
+					code += "\t" + getEnum(it->type) + it->name + ";\n" ;
 				}
 								
 				code += "\n" + $5.translation;
@@ -124,6 +124,11 @@ E 			: E '+' E
 				$$.label = gentempcode();
 				$$.translation = $1.translation + $3.translation + "\t" + $$.label + 
 					" = " + $1.label + " - " + $3.label + ";\n";
+			}
+			| E '*' E
+			{
+				$$.label = gentempcode();
+
 			}
 			| TK_ID '=' E
 			{
