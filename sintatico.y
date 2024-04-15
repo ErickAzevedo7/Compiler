@@ -129,17 +129,22 @@ E 			: E '+' E
 			}
 			| E '*' E
 			{
-				if($1.type == t_int && $2.type == t_int){
+				if($1.type == t_int && $3.type == t_int){
 					$$.label = gentempcode();
 					$$.translation = $1.translation + $3.translation + "\t" + $$.label +
 						" = " + $1.label + " * " + $3.label + ";\n";
 				}
-				else if(($1.type == t_int && $2.type == t_float) || ($1.type == t_int && $2.type == t_float)){
+				else if(($1.type == t_int && $3.type == t_float) || ($1.type == t_float && $3.type == t_int)){
+					symbol temp;
+					temp.name = gentempcode();
+					temp.type = t_float;
+
 					$$.label = gentempcode();
-					$1.label = gentempcode();
-					$$.translation = $1.label + " = " + "(float)" + "\t" + 
-					$1.translation + $3.translation + "\t" + $$.label +
-						" = " + $1.label + " * " + $3.label + ";\n";
+					$$.translation = $1.translation + $3.translation + "\t" +
+					temp.name + " = " + "(float) " + $1.label + ";\n" +
+					"\t" + $$.label +	" = " + temp.name + " * " + $3.label + ";\n";
+
+					insertTable(temp.name, temp.type);
 				}
 			}
 			| TK_ID '=' E
@@ -166,14 +171,16 @@ E 			: E '+' E
 			}
 			| TK_ID
 			{
+				symbol variable = getSymbol($1.label);
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = variable.type;
 
 				existInTable($1.label, $1.type);
 
-				symbol variable = getSymbol($1.label);
+				
 
-				insertTable($$.label, variable.type);
+				insertTable($$.label, $$.type);
 			}
 			;
 
