@@ -64,7 +64,6 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
 					code += "\t" + getEnum(it->type) + it->name + "\n" ;
 				}
-				
 								
 				code += "\n" + $5.translation;
 								
@@ -140,6 +139,14 @@ E 			: E '+' E
 
 				insertTable($$.label, $$.type);
 			}
+			| TK_REAL
+			{
+				$$.label = gentempcode();
+				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = t_float;
+
+				insertTable($$.label, $$.type);
+			}
 			| TK_ID
 			{
 				$$.label = gentempcode();
@@ -147,14 +154,6 @@ E 			: E '+' E
 				$$.type = $1.type;
 
 				existInTable($1.label, $1.type);
-
-				insertTable($$.label, $$.type);
-			}
-			| TK_REAL
-			{
-				$$.label = gentempcode();
-				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
-				$$.type = t_float;
 
 				insertTable($$.label, $$.type);
 			}
@@ -248,4 +247,3 @@ void existInTable(string name, types type){
 		yyerror("A Variável " + variable.name + " não foi declarada");
 	}
 }
-
