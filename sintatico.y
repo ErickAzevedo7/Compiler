@@ -12,8 +12,8 @@ using namespace std;
 int var_temp_qnt;
 
 enum types{
-	t_int = 0,
-	t_float = 1,
+	t_int = 1,
+	t_float = 2,
 };
 
 struct attributes
@@ -35,6 +35,7 @@ stack< list<symbol> > symbolTable;
 int yylex(void);
 void yyerror(string);
 bool findSymbol(symbol);
+symbol getSymbol(string);
 void insertTable(string, types);
 void existInTable(string, types);
 void printScope();
@@ -50,6 +51,7 @@ string gentempcode();
 %start S
 
 %left '+'
+%left '*'
 
 %%
 
@@ -127,8 +129,18 @@ E 			: E '+' E
 			}
 			| E '*' E
 			{
-				$$.label = gentempcode();
-
+				if($1.type == t_int && $2.type == t_int){
+					$$.label = gentempcode();
+					$$.translation = $1.translation + $3.translation + "\t" + $$.label +
+						" = " + $1.label + " * " + $3.label + ";\n";
+				}
+				else if(($1.type == t_int && $2.type == t_float) || ($1.type == t_int && $2.type == t_float)){
+					$$.label = gentempcode();
+					$1.label = gentempcode();
+					$$.translation = $1.label + " = " + "(float)" + "\t" + 
+					$1.translation + $3.translation + "\t" + $$.label +
+						" = " + $1.label + " * " + $3.label + ";\n";
+				}
 			}
 			| TK_ID '=' E
 			{
@@ -156,11 +168,12 @@ E 			: E '+' E
 			{
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
-				$$.type = $1.type;
 
 				existInTable($1.label, $1.type);
 
-				insertTable($$.label, $$.type);
+				symbol variable = getSymbol($1.label);
+
+				insertTable($$.label, variable.type);
 			}
 			;
 
@@ -207,10 +220,23 @@ bool findSymbol(symbol variable){
 	return false;
 }
 
+symbol getSymbol(string name){
+	symbol variable;
+
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+		if(it->name == name){
+			return *it;
+		}	
+	}
+
+	return variable;
+}
+
 void printScope(){
 	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
 		cout << it->name << endl;
 		cout << it->type << endl;
+		cout << endl;
 	}
 
 	return;
@@ -227,6 +253,7 @@ string getEnum(types type){
 		return "int ";
 	else if(type == t_float)
 		return "float ";
+	return "";
 }
 
 void insertTable(string name, types type){
