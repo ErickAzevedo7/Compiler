@@ -14,6 +14,7 @@ int var_temp_qnt;
 enum types{
 	t_int = 0,
 	t_float = 1,
+	t_char = 2,
 };
 
 struct attributes
@@ -43,8 +44,8 @@ string getEnum(types);
 string gentempcode();
 %}
 
-%token TK_NUM
-%token TK_MAIN TK_ID TK_TYPE_INT
+%token TK_NUM TK_CHAR
+%token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_CHAR
 %token TK_END TK_ERROR
 
 %start S
@@ -103,6 +104,14 @@ COMAND 	: E ';'
 
 				insertTable($2.label, $$.type);
 			}
+			| TK_TYPE_CHAR TK_ID ';'
+			{
+				$$.type = t_char;
+				$$.label = "";
+				$$.translation = "";
+
+				insertTable($2.label, $$.type);
+			}
 			;
 
 E 			: E '+' E
@@ -139,6 +148,14 @@ E 			: E '+' E
 				$$.type = $1.type;
 
 				existInTable($1.label, $1.type);
+
+				insertTable($$.label, $$.type);
+			}
+			| TK_CHAR
+			{
+				$$.label = gentempcode();
+				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = t_char;
 
 				insertTable($$.label, $$.type);
 			}
@@ -205,6 +222,8 @@ void declareScopeVariable(){
 string getEnum(types type){
 	if(type == t_int)
 		return "int ";
+	else if(type == t_char)
+		return "char ";
 }
 
 void insertTable(string name, types type){
