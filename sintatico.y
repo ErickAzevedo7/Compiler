@@ -28,6 +28,7 @@ struct attributes
 typedef struct{
 	string name;
 	types type;
+	string nickname;
 }symbol;
 
 typedef struct{
@@ -48,7 +49,7 @@ int yylex(void);
 void yyerror(string);
 bool findSymbol(symbol);
 symbol getSymbol(string);
-void insertTable(string, types);
+void insertTable(string, types, string);
 void existInTable(string, types);
 void printScope();
 void declareScopeVariable();
@@ -77,7 +78,7 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 								"int main(void) {\n";
 
 				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-					code += "\t" + getEnum(it->type) + " " + it->name + ";\n" ;
+					code += "\t" + getEnum(it->type) + " " + it->nickname + "; " + "//" + it->name + "\n" ;
 				}
 								
 				code += "\n" + $5.translation;
@@ -115,7 +116,7 @@ COMAND 	: E ';'
 				$$.label = "";
 				$$.translation = "";
 
-				insertTable($2.label, $$.type);
+				insertTable($2.label, $$.type, gentempcode());
 			}
 			| TK_TYPE_FLOAT TK_ID ';'
 			{
@@ -123,7 +124,7 @@ COMAND 	: E ';'
 				$$.label = "";
 				$$.translation = "";
 
-				insertTable($2.label, $$.type);
+				insertTable($2.label, $$.type, gentempcode());
 			}
 			;
 
@@ -154,12 +155,12 @@ E 			: E '+' E
 					if($1.type != temp.type){
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
 						$$.translation += $$.label + " = " + temp.name + " * " + $3.label + ";\n";
-						insertTable(temp.name, temp.type);
+						insertTable(temp.name, temp.type, temp.name);
 					}
 					else{
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
 						$$.translation += $$.label + " = " + $1.label + " * " + temp.name + ";\n";
-						insertTable(temp.name, temp.type);
+						insertTable(temp.name, temp.type, temp.name);
 					}
 				}
 				else{
@@ -168,11 +169,13 @@ E 			: E '+' E
 					$$.translation += $$.label + " = " + $1.label + " * " + $3.label + ";\n";
 				}
 
-				insertTable($$.label, $$.type);
+				insertTable($$.label, $$.type, $$.label);
 			}
 			| TK_ID '=' E
 			{
-				$$.translation = $1.translation + $3.translation + "\t" + $1.label + " = " + $3.label + ";\n";
+				symbol id = getSymbol($1.label);
+
+				$$.translation = $1.translation + $3.translation + "\t" + id.nickname + " = " + $3.label + ";\n";
 
 				existInTable($1.label, $1.type);
 			}
@@ -182,7 +185,7 @@ E 			: E '+' E
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 				$$.type = t_int;
 
-				insertTable($$.label, $$.type);
+				insertTable($$.label, $$.type, $$.label);
 			}
 			| TK_REAL
 			{
@@ -190,20 +193,20 @@ E 			: E '+' E
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 				$$.type = t_float;
 
-				insertTable($$.label, $$.type);
+				insertTable($$.label, $$.type, $$.label);
 			}
 			| TK_ID
 			{
 				symbol variable = getSymbol($1.label);
 				$$.label = gentempcode();
-				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.translation = "\t" + $$.label + " = " + variable.nickname + ";\n";
 				$$.type = variable.type;
 
 				existInTable($1.label, $1.type);
 
 				
 
-				insertTable($$.label, $$.type);
+				insertTable($$.label, $$.type, $$.label);
 			}
 			;
 
@@ -288,17 +291,18 @@ string getEnum(types type){
 	return "";
 }
 
-void insertTable(string name, types type){
+void insertTable(string name, types type, string nickname){
 	symbol variable;
 	variable.name = name;
 	variable.type = type;
+	variable.nickname = nickname;
 
 	if(!findSymbol(variable)){
 		symbolTable.top().push_back(variable);
 
 	}
 	else{
-		//yyerror("A Variável " + variable.name + " ja foi declarada.");
+		yyerror("A Variável " + variable.name + " ja foi declarada.");
 	}
 }
 
