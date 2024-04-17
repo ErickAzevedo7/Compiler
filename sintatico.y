@@ -131,10 +131,33 @@ COMAND 	: E ';'
 
 E 			: E '+' E
 			{
-				$$.label = gentempcode();
-				$$.translation = $1.translation + $3.translation + "\t" + $$.label + 
-					" = " + $1.label + " + " + $3.label + ";\n";
+				$$.translation = $1.translation + $3.translation + "\t";
 
+				if($1.type != $3.type){
+					symbol temp;
+					temp.name = gentempcode();
+					temp.type = findComparison($1.type, $3.type, "+");
+					$$.type = temp.type;
+					$$.label = gentempcode();
+
+					if($1.type != temp.type){
+						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
+						$$.translation += $$.label + " = " + temp.name + " + " + $3.label + ";\n";
+						insertTable("", temp.type, temp.name, true);
+					}
+					else{
+						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
+						$$.translation += $$.label + " = " + $1.label + " + " + temp.name + ";\n";
+						insertTable("", temp.type, temp.name, true);
+					}
+				}
+				else{
+					$$.label = gentempcode();
+					$$.type = $1.type;
+					$$.translation += $$.label + " = " + $1.label + " + " + $3.label + ";\n";
+				}
+
+				insertTable("", $$.type, $$.label, true);
 			}
 			| E '-' E
 			{
@@ -224,7 +247,8 @@ int main(int argc, char* argv[])
 	symbolTable.push(global);
 	list <symbol> main;
 
-	comparisonTable["floatCast"] = {t_int, t_float, "*", t_float, 0};
+	comparisonTable["floatCast*"] = {t_int, t_float, "*", t_float, 0};
+	comparisonTable["floatCast+"] = {t_int, t_float, "+", t_float, 0};
 
 	symbolTable.push(main);
 
@@ -258,7 +282,7 @@ symbol getSymbol(string name){
 	symbol variable;
 
 	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-		if(it->name == name){
+		if(it->istemp == false && it->name == name){
 			return *it;
 		}	
 	}
