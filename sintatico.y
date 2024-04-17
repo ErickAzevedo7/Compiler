@@ -1,5 +1,6 @@
 %{
 #include <iostream>
+#include <map>
 #include <string>
 #include <sstream>
 #include <stack>
@@ -12,6 +13,7 @@ using namespace std;
 int var_temp_qnt;
 
 enum types{
+	null = 0,
 	t_int = 1,
 	t_float = 2,
 };
@@ -28,6 +30,16 @@ typedef struct{
 	types type;
 }symbol;
 
+typedef struct{
+	types parameter1;
+	types parameter2;
+	string operation;
+	types action;
+	bool orderMatters;
+}comparison;
+
+map<string, comparison> comparisonTable;
+
 list <symbol> global;
 
 stack< list<symbol> > symbolTable;
@@ -40,6 +52,7 @@ void insertTable(string, types);
 void existInTable(string, types);
 void printScope();
 void declareScopeVariable();
+types findComparison(types, types, string);
 string getEnum(types);
 string gentempcode();
 %}
@@ -64,7 +77,7 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 								"int main(void) {\n";
 
 				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-					code += "\t" + getEnum(it->type) + it->name + ";\n" ;
+					code += "\t" + getEnum(it->type) + " " + it->name + ";\n" ;
 				}
 								
 				code += "\n" + $5.translation;
@@ -129,23 +142,33 @@ E 			: E '+' E
 			}
 			| E '*' E
 			{
-				if($1.type == t_int && $3.type == t_int){
-					$$.label = gentempcode();
-					$$.translation = $1.translation + $3.translation + "\t" + $$.label +
-						" = " + $1.label + " * " + $3.label + ";\n";
-				}
-				else if(($1.type == t_int && $3.type == t_float) || ($1.type == t_float && $3.type == t_int)){
+				$$.translation = $1.translation + $3.translation + "\t";
+
+				if($1.type != $3.type){
 					symbol temp;
 					temp.name = gentempcode();
-					temp.type = t_float;
-
+					temp.type = findComparison($1.type, $3.type, "*");
+					$$.type = temp.type;
 					$$.label = gentempcode();
-					$$.translation = $1.translation + $3.translation + "\t" +
-					temp.name + " = " + "(float) " + $1.label + ";\n" +
-					"\t" + $$.label +	" = " + temp.name + " * " + $3.label + ";\n";
 
-					insertTable(temp.name, temp.type);
+					if($1.type != temp.type){
+						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
+						$$.translation += $$.label + " = " + temp.name + " * " + $3.label + ";\n";
+						insertTable(temp.name, temp.type);
+					}
+					else{
+						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
+						$$.translation += $$.label + " = " + $1.label + " * " + temp.name + ";\n";
+						insertTable(temp.name, temp.type);
+					}
 				}
+				else{
+					$$.label = gentempcode();
+					$$.type = $1.type;
+					$$.translation += $$.label + " = " + $1.label + " * " + $3.label + ";\n";
+				}
+
+				insertTable($$.label, $$.type);
 			}
 			| TK_ID '=' E
 			{
@@ -200,6 +223,8 @@ int main(int argc, char* argv[])
 {
 	symbolTable.push(global);
 	list <symbol> main;
+
+	comparisonTable["floatCast"] = {t_int, t_float, "*", t_float, 0};
 
 	symbolTable.push(main);
 
@@ -257,9 +282,9 @@ void declareScopeVariable(){
 
 string getEnum(types type){
 	if(type == t_int)
-		return "int ";
+		return "int";
 	else if(type == t_float)
-		return "float ";
+		return "float";
 	return "";
 }
 
@@ -273,7 +298,7 @@ void insertTable(string name, types type){
 
 	}
 	else{
-		yyerror("A Variável " + variable.name + " ja foi declarada.");
+		//yyerror("A Variável " + variable.name + " ja foi declarada.");
 	}
 }
 
@@ -285,4 +310,16 @@ void existInTable(string name, types type){
 	if(!findSymbol(variable)){
 		yyerror("A Variável " + variable.name + " não foi declarada");
 	}
+}
+
+types findComparison(types parameter1, types parameter2, string operation){
+	for(auto it = comparisonTable.begin(); it != comparisonTable.end(); ++it){	
+		if(it->second.operation == operation && parameter1 == it->second.parameter1 &&  parameter2 == it->second.parameter2){
+			return it->second.action;
+		}
+		if(it->second.operation == operation && parameter1 == it->second.parameter2 &&  parameter2 == it->second.parameter1){
+			return it->second.action;
+		}
+	}
+	return null;
 }
