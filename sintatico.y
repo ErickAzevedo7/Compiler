@@ -28,7 +28,8 @@ struct attributes
 typedef struct{
 	string name;
 	types type;
-	string nickname;
+	string address;
+	bool istemp;
 }symbol;
 
 typedef struct{
@@ -49,7 +50,7 @@ int yylex(void);
 void yyerror(string);
 bool findSymbol(symbol);
 symbol getSymbol(string);
-void insertTable(string, types, string);
+void insertTable(string, types, string, bool);
 void existInTable(string, types);
 void printScope();
 void declareScopeVariable();
@@ -78,7 +79,7 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 								"int main(void) {\n";
 
 				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-					code += "\t" + getEnum(it->type) + " " + it->nickname + "; " + "//" + it->name + "\n" ;
+					code += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
 				}
 								
 				code += "\n" + $5.translation;
@@ -116,7 +117,7 @@ COMAND 	: E ';'
 				$$.label = "";
 				$$.translation = "";
 
-				insertTable($2.label, $$.type, gentempcode());
+				insertTable($2.label, $$.type, gentempcode(), false);
 			}
 			| TK_TYPE_FLOAT TK_ID ';'
 			{
@@ -124,7 +125,7 @@ COMAND 	: E ';'
 				$$.label = "";
 				$$.translation = "";
 
-				insertTable($2.label, $$.type, gentempcode());
+				insertTable($2.label, $$.type, gentempcode(), false);
 			}
 			;
 
@@ -155,12 +156,12 @@ E 			: E '+' E
 					if($1.type != temp.type){
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
 						$$.translation += $$.label + " = " + temp.name + " * " + $3.label + ";\n";
-						insertTable(temp.name, temp.type, temp.name);
+						insertTable("", temp.type, temp.name, true);
 					}
 					else{
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
 						$$.translation += $$.label + " = " + $1.label + " * " + temp.name + ";\n";
-						insertTable(temp.name, temp.type, temp.name);
+						insertTable("", temp.type, temp.name, true);
 					}
 				}
 				else{
@@ -169,13 +170,13 @@ E 			: E '+' E
 					$$.translation += $$.label + " = " + $1.label + " * " + $3.label + ";\n";
 				}
 
-				insertTable($$.label, $$.type, $$.label);
+				insertTable("", $$.type, $$.label, true);
 			}
 			| TK_ID '=' E
 			{
 				symbol id = getSymbol($1.label);
 
-				$$.translation = $1.translation + $3.translation + "\t" + id.nickname + " = " + $3.label + ";\n";
+				$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
 
 				existInTable($1.label, $1.type);
 			}
@@ -185,7 +186,7 @@ E 			: E '+' E
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 				$$.type = t_int;
 
-				insertTable($$.label, $$.type, $$.label);
+				insertTable("", $$.type, $$.label, true);
 			}
 			| TK_REAL
 			{
@@ -193,20 +194,16 @@ E 			: E '+' E
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 				$$.type = t_float;
 
-				insertTable($$.label, $$.type, $$.label);
+				insertTable("", $$.type, $$.label, true);
 			}
 			| TK_ID
 			{
 				symbol variable = getSymbol($1.label);
-				$$.label = gentempcode();
-				$$.translation = "\t" + $$.label + " = " + variable.nickname + ";\n";
+				$$.label = variable.address;
+				$$.translation = "";
 				$$.type = variable.type;
 
 				existInTable($1.label, $1.type);
-
-				
-
-				insertTable($$.label, $$.type, $$.label);
 			}
 			;
 
@@ -235,6 +232,8 @@ int main(int argc, char* argv[])
 
 	yyparse();
 
+	printScope();
+
 	return 0;
 }
 
@@ -247,7 +246,7 @@ void yyerror(string MSG)
 bool findSymbol(symbol variable){
 
 	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-		if(it->name == variable.name){
+		if(it->istemp == false && it->name == variable.name){
 			return true;
 		}	
 	}
@@ -269,8 +268,7 @@ symbol getSymbol(string name){
 
 void printScope(){
 	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-		cout << it->name << endl;
-		cout << it->type << endl;
+		cout << it->name << " | " << getEnum(it->type) << " | " << it->address <<  " | " << it->istemp << endl;
 		cout << endl;
 	}
 
@@ -291,11 +289,12 @@ string getEnum(types type){
 	return "";
 }
 
-void insertTable(string name, types type, string nickname){
+void insertTable(string name, types type, string address, bool istemp){
 	symbol variable;
 	variable.name = name;
 	variable.type = type;
-	variable.nickname = nickname;
+	variable.address = address;
+	variable.istemp = istemp;
 
 	if(!findSymbol(variable)){
 		symbolTable.top().push_back(variable);
