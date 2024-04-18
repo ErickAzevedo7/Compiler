@@ -60,6 +60,7 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 								"#include <iostream>\n"
 								"#include <string.h>\n"
 								"#include <stdio.h>\n"
+								"#define BOOL int\n"
 								"int main(void) {\n";
 
 				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
