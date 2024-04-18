@@ -66,7 +66,7 @@ string gentempcode();
 
 %start S
 
-%left '+'
+%left '+' '-'
 %left '*'
 
 %%
@@ -148,25 +148,28 @@ E 			: E '+' E
 				if($1.type != $3.type){
 					symbol temp;
 					temp.name = gentempcode();
-					temp.type = findComparison($1.type, $3.type, "+");
+					temp.type = findComparison($1.type, $3.type, $2.label);
 					$$.type = temp.type;
 					$$.label = gentempcode();
 
+					if(temp.type == null){
+						yyerror("não é possivel fazer a operação de " + $2.label + " com os tipos " + getEnum($1.type) + " e " + getEnum($3.type));
+					}
 					if($1.type != temp.type){
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + temp.name + " + " + $3.label + ";\n";
+						$$.translation += $$.label + " = " + temp.name + " " + $2.label + " " + $3.label + ";\n";
 						insertTable("", temp.type, temp.name, true);
 					}
 					else{
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + $1.label + " + " + temp.name + ";\n";
+						$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + temp.name + ";\n";
 						insertTable("", temp.type, temp.name, true);
 					}
 				}
 				else{
 					$$.label = gentempcode();
 					$$.type = $1.type;
-					$$.translation += $$.label + " = " + $1.label + " + " + $3.label + ";\n";
+					$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
 
 				insertTable("", $$.type, $$.label, true);
@@ -184,25 +187,28 @@ E 			: E '+' E
 				if($1.type != $3.type){
 					symbol temp;
 					temp.name = gentempcode();
-					temp.type = findComparison($1.type, $3.type, "*");
+					temp.type = findComparison($1.type, $3.type, $2.label);
 					$$.type = temp.type;
 					$$.label = gentempcode();
 
+					if(temp.type == null){
+						yyerror("não é possivel fazer a operação de " + $2.label + " com os tipos " + getEnum($1.type) + " e " + getEnum($3.type));
+					}
 					if($1.type != temp.type){
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + temp.name + " * " + $3.label + ";\n";
+						$$.translation += $$.label + " = " + temp.name + " " + $2.label + " " + $3.label + ";\n";
 						insertTable("", temp.type, temp.name, true);
 					}
 					else{
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + $1.label + " * " + temp.name + ";\n";
+						$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + temp.name + ";\n";
 						insertTable("", temp.type, temp.name, true);
 					}
 				}
 				else{
 					$$.label = gentempcode();
 					$$.type = $1.type;
-					$$.translation += $$.label + " = " + $1.label + " * " + $3.label + ";\n";
+					$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
 
 				insertTable("", $$.type, $$.label, true);
@@ -212,6 +218,10 @@ E 			: E '+' E
 				symbol id = getSymbol($1.label);
 
 				$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
+
+				if(id.type != $3.type){
+					yyerror("Atribuição de um tipo " + getEnum($3.type) + " a uma variavel do tipo " + getEnum(id.type));
+				}
 
 				existInTable($1.label, $1.type);
 			}
@@ -235,9 +245,7 @@ E 			: E '+' E
 			{
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
-				$$.type = $1.type;
-
-				existInTable($1.label, $1.type);
+				$$.type = t_bool;
 
 				insertTable("", $$.type, $$.label, true);
 			}
@@ -290,7 +298,6 @@ void yyerror(string MSG)
 }
 
 bool findSymbol(symbol variable){
-
 	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
 		if(it->istemp == false && it->name == variable.name){
 			return true;
@@ -346,7 +353,6 @@ void insertTable(string name, types type, string address, bool istemp){
 
 	if(!findSymbol(variable)){
 		symbolTable.top().push_back(variable);
-
 	}
 	else{
 		yyerror("A Variável " + variable.name + " ja foi declarada.");
@@ -373,8 +379,4 @@ types findComparison(types parameter1, types parameter2, string operation){
 		}
 	}
 	return null;
-}
-
-int isBool(char c){
-	return (c == 'TRUE' | c == 'FALSE');
 }

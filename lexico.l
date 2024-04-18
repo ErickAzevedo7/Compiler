@@ -30,7 +30,7 @@ ID {LETRA}({LETRA}|{NUM})*
 
 [(){}[\];,]	{ return *yytext; }
 
-[+\-*/]		{ return *yytext; }
+[+\-*/]		{yylval.label = yytext; return *yytext; }
 
 "="		    { return '='; }
 
