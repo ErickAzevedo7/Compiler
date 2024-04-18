@@ -26,7 +26,7 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "float"     {return TK_TYPE_FLOAT;}
 
-"bool"     {return TK_TYPE_BOOL;}
+"bool"      {return TK_TYPE_BOOL;}
 
 [(){}[\];,]	{ return *yytext; }
 
