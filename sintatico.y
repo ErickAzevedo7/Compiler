@@ -54,7 +54,6 @@ symbol getSymbol(string);
 void insertTable(string, types, string, bool);
 void existInTable(string, types);
 void printScope();
-void declareScopeVariable();
 types findComparison(types, types, string);
 string getEnum(types);
 string gentempcode();
@@ -326,12 +325,6 @@ void printScope(){
 	}
 
 	return;
-}
-
-void declareScopeVariable(){
-	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-		
-	}
 }
 
 string getEnum(types type){
