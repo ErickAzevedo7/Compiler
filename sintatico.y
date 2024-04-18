@@ -60,7 +60,9 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 								"#include <iostream>\n"
 								"#include <string.h>\n"
 								"#include <stdio.h>\n"
-								"#define BOOL int\n"
+								"#define bool int\n"
+								"#define True 1\n"
+								"#define False 0\n"
 								"int main(void) {\n";
 
 				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
@@ -157,7 +159,7 @@ E 			: E '+' E
 
 				insertTable($$.label, $$.type);
 			}
-			| TK_ID
+			| TK_BOOL
 			{
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
@@ -167,7 +169,7 @@ E 			: E '+' E
 
 				insertTable($$.label, $$.type);
 			}
-			| TK_BOOL
+			| TK_ID
 			{
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
@@ -256,7 +258,7 @@ void insertTable(string name, types type){
 
 	}
 	else{
-		yyerror("A Variável " + variable.name + " ja foi declarada.");
+		//yyerror("A Variável " + variable.name + " ja foi declarada.");
 	}
 }
 
@@ -266,7 +268,7 @@ void existInTable(string name, types type){
 	variable.type = type;
 
 	if(!findSymbol(variable)){
-		yyerror("A Variável " + variable.name + " não foi declarada");
+		//yyerror("A Variável " + variable.name + " não foi declarada");
 	}
 }
 

@@ -11,6 +11,7 @@ DELIM {ESPACO}+
 NUM {DIGITO}+
 REAL {NUM}+("."{NUM}+)?
 CHAR \'({LETRA}|{NUM})\'
+BOOL ("True"|"False")
 ID {LETRA}({LETRA}|{NUM})*
 
 %%
@@ -34,10 +35,9 @@ ID {LETRA}({LETRA}|{NUM})*
 "="		    { return '='; }
 
 {NUM}		{ yylval.label = yytext; return TK_NUM; }
+{BOOL}      { yylval.label = yytext; return TK_BOOL; }
 {ID}		{ yylval.label = yytext; return TK_ID; }
 {REAL}		{ yylval.label = yytext; return TK_REAL; }
-
-"true"|"false"  { yylval.label = yytext; return TK_BOOL;}
 
 .			{ *yytext; }
 
