@@ -16,6 +16,7 @@ enum types{
 	null = 0,
 	t_int = 1,
 	t_float = 2,
+	t_bool = 3,
 };
 
 struct attributes
@@ -53,19 +54,18 @@ symbol getSymbol(string);
 void insertTable(string, types, string, bool);
 void existInTable(string, types);
 void printScope();
-void declareScopeVariable();
 types findComparison(types, types, string);
 string getEnum(types);
 string gentempcode();
 %}
 
-%token TK_NUM TK_REAL
-%token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT
+%token TK_NUM TK_REAL TK_BOOL
+%token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL
 %token TK_END TK_ERROR
 
 %start S
 
-%left '+'
+%left '+' '-'
 %left '*'
 
 %%
@@ -76,6 +76,9 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 								"#include <iostream>\n"
 								"#include <string.h>\n"
 								"#include <stdio.h>\n"
+								"#define bool int\n"
+								"#define True 1\n"
+								"#define False 0\n"
 								"int main(void) {\n";
 
 				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
@@ -127,6 +130,14 @@ COMAND 	: E ';'
 
 				insertTable($2.label, $$.type, gentempcode(), false);
 			}
+			| TK_TYPE_BOOL TK_ID ';'
+			{
+				$$.type = t_bool;
+				$$.label = "";
+				$$.translation = "";
+
+				insertTable($2.label, $$.type, gentempcode(), false);
+			}
 			;
 
 E 			: E '+' E
@@ -136,25 +147,28 @@ E 			: E '+' E
 				if($1.type != $3.type){
 					symbol temp;
 					temp.name = gentempcode();
-					temp.type = findComparison($1.type, $3.type, "+");
+					temp.type = findComparison($1.type, $3.type, $2.label);
 					$$.type = temp.type;
 					$$.label = gentempcode();
 
+					if(temp.type == null){
+						yyerror("não é possivel fazer a operação de " + $2.label + " com os tipos " + getEnum($1.type) + " e " + getEnum($3.type));
+					}
 					if($1.type != temp.type){
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + temp.name + " + " + $3.label + ";\n";
+						$$.translation += $$.label + " = " + temp.name + " " + $2.label + " " + $3.label + ";\n";
 						insertTable("", temp.type, temp.name, true);
 					}
 					else{
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + $1.label + " + " + temp.name + ";\n";
+						$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + temp.name + ";\n";
 						insertTable("", temp.type, temp.name, true);
 					}
 				}
 				else{
 					$$.label = gentempcode();
 					$$.type = $1.type;
-					$$.translation += $$.label + " = " + $1.label + " + " + $3.label + ";\n";
+					$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
 
 				insertTable("", $$.type, $$.label, true);
@@ -172,25 +186,28 @@ E 			: E '+' E
 				if($1.type != $3.type){
 					symbol temp;
 					temp.name = gentempcode();
-					temp.type = findComparison($1.type, $3.type, "*");
+					temp.type = findComparison($1.type, $3.type, $2.label);
 					$$.type = temp.type;
 					$$.label = gentempcode();
 
+					if(temp.type == null){
+						yyerror("não é possivel fazer a operação de " + $2.label + " com os tipos " + getEnum($1.type) + " e " + getEnum($3.type));
+					}
 					if($1.type != temp.type){
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + temp.name + " * " + $3.label + ";\n";
+						$$.translation += $$.label + " = " + temp.name + " " + $2.label + " " + $3.label + ";\n";
 						insertTable("", temp.type, temp.name, true);
 					}
 					else{
 						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + $1.label + " * " + temp.name + ";\n";
+						$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + temp.name + ";\n";
 						insertTable("", temp.type, temp.name, true);
 					}
 				}
 				else{
 					$$.label = gentempcode();
 					$$.type = $1.type;
-					$$.translation += $$.label + " = " + $1.label + " * " + $3.label + ";\n";
+					$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
 
 				insertTable("", $$.type, $$.label, true);
@@ -200,6 +217,10 @@ E 			: E '+' E
 				symbol id = getSymbol($1.label);
 
 				$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
+
+				if(id.type != $3.type){
+					yyerror("Atribuição de um tipo " + getEnum($3.type) + " a uma variavel do tipo " + getEnum(id.type));
+				}
 
 				existInTable($1.label, $1.type);
 			}
@@ -216,6 +237,14 @@ E 			: E '+' E
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 				$$.type = t_float;
+
+				insertTable("", $$.type, $$.label, true);
+			}
+			| TK_BOOL
+			{
+				$$.label = gentempcode();
+				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = t_bool;
 
 				insertTable("", $$.type, $$.label, true);
 			}
@@ -268,7 +297,6 @@ void yyerror(string MSG)
 }
 
 bool findSymbol(symbol variable){
-
 	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
 		if(it->istemp == false && it->name == variable.name){
 			return true;
@@ -299,17 +327,13 @@ void printScope(){
 	return;
 }
 
-void declareScopeVariable(){
-	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-		
-	}
-}
-
 string getEnum(types type){
 	if(type == t_int)
 		return "int";
 	else if(type == t_float)
 		return "float";
+	else if(type == t_bool)
+		return "bool";
 	return "";
 }
 
@@ -322,7 +346,6 @@ void insertTable(string name, types type, string address, bool istemp){
 
 	if(!findSymbol(variable)){
 		symbolTable.top().push_back(variable);
-
 	}
 	else{
 		yyerror("A Variável " + variable.name + " ja foi declarada.");
