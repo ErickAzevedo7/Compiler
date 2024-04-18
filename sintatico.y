@@ -1,5 +1,6 @@
 %{
 #include <iostream>
+#include <map>
 #include <string>
 #include <sstream>
 #include <stack>
@@ -12,8 +13,9 @@ using namespace std;
 int var_temp_qnt;
 
 enum types{
-	t_int = 0,
-	t_float = 1,
+	null = 0,
+	t_int = 1,
+	t_float = 2,
 };
 
 struct attributes
@@ -26,7 +28,19 @@ struct attributes
 typedef struct{
 	string name;
 	types type;
+	string address;
+	bool istemp;
 }symbol;
+
+typedef struct{
+	types parameter1;
+	types parameter2;
+	string operation;
+	types action;
+	bool orderMatters;
+}comparison;
+
+map<string, comparison> comparisonTable;
 
 list <symbol> global;
 
@@ -35,10 +49,12 @@ stack< list<symbol> > symbolTable;
 int yylex(void);
 void yyerror(string);
 bool findSymbol(symbol);
-void insertTable(string, types);
+symbol getSymbol(string);
+void insertTable(string, types, string, bool);
 void existInTable(string, types);
 void printScope();
 void declareScopeVariable();
+types findComparison(types, types, string);
 string getEnum(types);
 string gentempcode();
 %}
@@ -50,6 +66,7 @@ string gentempcode();
 %start S
 
 %left '+'
+%left '*'
 
 %%
 
@@ -62,7 +79,7 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 								"int main(void) {\n";
 
 				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-					code += "\t" + getEnum(it->type) + it->name + "\n" ;
+					code += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
 				}
 								
 				code += "\n" + $5.translation;
@@ -100,7 +117,7 @@ COMAND 	: E ';'
 				$$.label = "";
 				$$.translation = "";
 
-				insertTable($2.label, $$.type);
+				insertTable($2.label, $$.type, gentempcode(), false);
 			}
 			| TK_TYPE_FLOAT TK_ID ';'
 			{
@@ -108,16 +125,39 @@ COMAND 	: E ';'
 				$$.label = "";
 				$$.translation = "";
 
-				insertTable($2.label, $$.type);
+				insertTable($2.label, $$.type, gentempcode(), false);
 			}
 			;
 
 E 			: E '+' E
 			{
-				$$.label = gentempcode();
-				$$.translation = $1.translation + $3.translation + "\t" + $$.label + 
-					" = " + $1.label + " + " + $3.label + ";\n";
+				$$.translation = $1.translation + $3.translation + "\t";
 
+				if($1.type != $3.type){
+					symbol temp;
+					temp.name = gentempcode();
+					temp.type = findComparison($1.type, $3.type, "+");
+					$$.type = temp.type;
+					$$.label = gentempcode();
+
+					if($1.type != temp.type){
+						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
+						$$.translation += $$.label + " = " + temp.name + " + " + $3.label + ";\n";
+						insertTable("", temp.type, temp.name, true);
+					}
+					else{
+						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
+						$$.translation += $$.label + " = " + $1.label + " + " + temp.name + ";\n";
+						insertTable("", temp.type, temp.name, true);
+					}
+				}
+				else{
+					$$.label = gentempcode();
+					$$.type = $1.type;
+					$$.translation += $$.label + " = " + $1.label + " + " + $3.label + ";\n";
+				}
+
+				insertTable("", $$.type, $$.label, true);
 			}
 			| E '-' E
 			{
@@ -125,9 +165,41 @@ E 			: E '+' E
 				$$.translation = $1.translation + $3.translation + "\t" + $$.label + 
 					" = " + $1.label + " - " + $3.label + ";\n";
 			}
+			| E '*' E
+			{
+				$$.translation = $1.translation + $3.translation + "\t";
+
+				if($1.type != $3.type){
+					symbol temp;
+					temp.name = gentempcode();
+					temp.type = findComparison($1.type, $3.type, "*");
+					$$.type = temp.type;
+					$$.label = gentempcode();
+
+					if($1.type != temp.type){
+						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
+						$$.translation += $$.label + " = " + temp.name + " * " + $3.label + ";\n";
+						insertTable("", temp.type, temp.name, true);
+					}
+					else{
+						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
+						$$.translation += $$.label + " = " + $1.label + " * " + temp.name + ";\n";
+						insertTable("", temp.type, temp.name, true);
+					}
+				}
+				else{
+					$$.label = gentempcode();
+					$$.type = $1.type;
+					$$.translation += $$.label + " = " + $1.label + " * " + $3.label + ";\n";
+				}
+
+				insertTable("", $$.type, $$.label, true);
+			}
 			| TK_ID '=' E
 			{
-				$$.translation = $1.translation + $3.translation + "\t" + $1.label + " = " + $3.label + ";\n";
+				symbol id = getSymbol($1.label);
+
+				$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
 
 				existInTable($1.label, $1.type);
 			}
@@ -137,7 +209,7 @@ E 			: E '+' E
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 				$$.type = t_int;
 
-				insertTable($$.label, $$.type);
+				insertTable("", $$.type, $$.label, true);
 			}
 			| TK_REAL
 			{
@@ -145,17 +217,16 @@ E 			: E '+' E
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 				$$.type = t_float;
 
-				insertTable($$.label, $$.type);
+				insertTable("", $$.type, $$.label, true);
 			}
 			| TK_ID
 			{
-				$$.label = gentempcode();
-				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
-				$$.type = $1.type;
+				symbol variable = getSymbol($1.label);
+				$$.label = variable.address;
+				$$.translation = "";
+				$$.type = variable.type;
 
 				existInTable($1.label, $1.type);
-
-				insertTable($$.label, $$.type);
 			}
 			;
 
@@ -176,11 +247,16 @@ int main(int argc, char* argv[])
 	symbolTable.push(global);
 	list <symbol> main;
 
+	comparisonTable["floatCast*"] = {t_int, t_float, "*", t_float, 0};
+	comparisonTable["floatCast+"] = {t_int, t_float, "+", t_float, 0};
+
 	symbolTable.push(main);
 
 	var_temp_qnt = 0;
 
 	yyparse();
+
+	printScope();
 
 	return 0;
 }
@@ -194,7 +270,7 @@ void yyerror(string MSG)
 bool findSymbol(symbol variable){
 
 	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-		if(it->name == variable.name){
+		if(it->istemp == false && it->name == variable.name){
 			return true;
 		}	
 	}
@@ -202,10 +278,22 @@ bool findSymbol(symbol variable){
 	return false;
 }
 
+symbol getSymbol(string name){
+	symbol variable;
+
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+		if(it->istemp == false && it->name == name){
+			return *it;
+		}	
+	}
+
+	return variable;
+}
+
 void printScope(){
 	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-		cout << it->name << endl;
-		cout << it->type << endl;
+		cout << it->name << " | " << getEnum(it->type) << " | " << it->address <<  " | " << it->istemp << endl;
+		cout << endl;
 	}
 
 	return;
@@ -219,15 +307,18 @@ void declareScopeVariable(){
 
 string getEnum(types type){
 	if(type == t_int)
-		return "int ";
+		return "int";
 	else if(type == t_float)
-		return "float ";
+		return "float";
+	return "";
 }
 
-void insertTable(string name, types type){
+void insertTable(string name, types type, string address, bool istemp){
 	symbol variable;
 	variable.name = name;
 	variable.type = type;
+	variable.address = address;
+	variable.istemp = istemp;
 
 	if(!findSymbol(variable)){
 		symbolTable.top().push_back(variable);
@@ -246,4 +337,16 @@ void existInTable(string name, types type){
 	if(!findSymbol(variable)){
 		yyerror("A Variável " + variable.name + " não foi declarada");
 	}
+}
+
+types findComparison(types parameter1, types parameter2, string operation){
+	for(auto it = comparisonTable.begin(); it != comparisonTable.end(); ++it){	
+		if(it->second.operation == operation && parameter1 == it->second.parameter1 &&  parameter2 == it->second.parameter2){
+			return it->second.action;
+		}
+		if(it->second.operation == operation && parameter1 == it->second.parameter2 &&  parameter2 == it->second.parameter1){
+			return it->second.action;
+		}
+	}
+	return null;
 }
