@@ -25,6 +25,8 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "float"     {return TK_TYPE_FLOAT;}
 
+"bool"     {return TK_TYPE_BOOL;}
+
 [(){}[\];,]	{ return *yytext; }
 
 [+\-*/]		{ return *yytext; }
@@ -34,6 +36,8 @@ ID {LETRA}({LETRA}|{NUM})*
 {NUM}		{ yylval.label = yytext; return TK_NUM; }
 {ID}		{ yylval.label = yytext; return TK_ID; }
 {REAL}		{ yylval.label = yytext; return TK_REAL; }
+
+"true"|"false"  { yylval.label = yytext; return TK_BOOL;}
 
 .			{ *yytext; }
 

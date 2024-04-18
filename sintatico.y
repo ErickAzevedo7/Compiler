@@ -14,6 +14,7 @@ int var_temp_qnt;
 enum types{
 	t_int = 0,
 	t_float = 1,
+	t_bool = 3,
 };
 
 struct attributes
@@ -43,8 +44,8 @@ string getEnum(types);
 string gentempcode();
 %}
 
-%token TK_NUM TK_REAL
-%token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT
+%token TK_NUM TK_REAL TK_BOOL
+%token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL
 %token TK_END TK_ERROR
 
 %start S
@@ -110,6 +111,14 @@ COMAND 	: E ';'
 
 				insertTable($2.label, $$.type);
 			}
+			| TK_TYPE_BOOL TK_ID ';'
+			{
+				$$.type = t_bool;
+				$$.label = "";
+				$$.translation = "";
+
+				insertTable($2.label, $$.type);
+			}
 			;
 
 E 			: E '+' E
@@ -148,6 +157,16 @@ E 			: E '+' E
 				insertTable($$.label, $$.type);
 			}
 			| TK_ID
+			{
+				$$.label = gentempcode();
+				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = $1.type;
+
+				existInTable($1.label, $1.type);
+
+				insertTable($$.label, $$.type);
+			}
+			| TK_BOOL
 			{
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
@@ -222,6 +241,8 @@ string getEnum(types type){
 		return "int ";
 	else if(type == t_float)
 		return "float ";
+	else if(type == t_bool)
+		return "bool ";
 }
 
 void insertTable(string name, types type){
@@ -246,4 +267,8 @@ void existInTable(string name, types type){
 	if(!findSymbol(variable)){
 		yyerror("A Variável " + variable.name + " não foi declarada");
 	}
+}
+
+int isBool(char c){
+	return (c == 'TRUE' | c == 'FALSE');
 }
