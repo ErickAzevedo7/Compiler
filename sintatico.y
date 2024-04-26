@@ -66,7 +66,7 @@ string gentempcode();
 %start S
 
 %left '+' '-'
-%left '*' 
+%left '*' '/'
 
 %%
 
