@@ -64,6 +64,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 
 %token TK_NUM TK_REAL TK_BOOL TK_CHAR
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
+%token TK_OP_GREATER_EQUAL
 %token TK_END TK_ERROR
 
 %start S
@@ -324,6 +325,10 @@ E 			: E '+' E
 			{
 				$$ = relationalOperator($1, $2, $3);
 			}
+			| E TK_OP_GREATER_EQUAL E
+			{
+				$$ = relationalOperator($1, $2, $3);
+			}
 			| TK_ID '=' E
 			{
 				symbol id = getSymbol($1.label);
@@ -404,6 +409,8 @@ int main(int argc, char* argv[])
 	comparisonTable["- (int-int)"] = {t_int, t_float, "-", t_float, 0};
 	comparisonTable["> (int-int)"] = {t_int, t_int, ">", t_int, 0};
 	comparisonTable["> (int-float)"] = {t_int, t_float, ">", t_float, 0};
+	comparisonTable[">= (int-int)"] = {t_int, t_int, ">=", t_int, 0};
+	comparisonTable[">= (int-float)"] = {t_int, t_float, ">=", t_float, 0};
 
 	symbolTable.push(main);
 

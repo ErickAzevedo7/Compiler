@@ -36,6 +36,8 @@ ID {LETRA}({LETRA}|{NUM})*
 
 [>]         {yylval.label = yytext; return *yytext; }
 
+">="        {yylval.label = yytext; return TK_OP_GREATER_EQUAL; }
+
 "="		    { return '='; }
 
 {NUM}		{ yylval.label = yytext; return TK_NUM; }
