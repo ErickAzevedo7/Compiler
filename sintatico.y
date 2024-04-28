@@ -422,6 +422,7 @@ string getEnum(types type){
 		return "bool";
 	else if(type == t_char)
 		return "char";
+		
 	return "";
 }
 
