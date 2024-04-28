@@ -22,7 +22,7 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "main"		{return TK_MAIN;}
 
-/* variables types */
+ /* variables types */
 "int"		{return TK_TYPE_INT;}
 "float"     {return TK_TYPE_FLOAT;}
 "bool"      {return TK_TYPE_BOOL;}
@@ -30,20 +30,20 @@ ID {LETRA}({LETRA}|{NUM})*
 
 [(){}[\];,]	{ return *yytext; }
 
-/* arithmetic operators */
+ /* arithmetic operators */
 [+\-*/%]	{yylval.label = yytext; return *yytext; }
 
-/* relational operators */
+ /* relational operators */
 [>\<]       {yylval.label = yytext; return *yytext; }
 ">="        {yylval.label = yytext; return TK_OP_GREATER_EQUAL; }
 "<="        {yylval.label = yytext; return TK_OP_LESS_EQUAL; }
 "=="        {yylval.label = yytext; return TK_OP_EQUAL; }
 "!="        {yylval.label = yytext; return TK_OP_DIF; }
 
-/* logic operators */
+ /* logic operators */
 [!]         {yylval.label = yytext; return *yytext; }
-"&&"        {yylval.label = yytext; return TK_OP_DIF; }
-"||"        {yylval.label = yytext; return TK_OP_DIF; }
+"&&"        {yylval.label = yytext; return TK_OP_AND; }
+"||"        {yylval.label = yytext; return TK_OP_OR; }
 
 "="		    { return '='; }
 

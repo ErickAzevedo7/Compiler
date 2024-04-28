@@ -65,14 +65,18 @@ attributes relationalOperator(attributes, attributes, attributes);
 %token TK_NUM TK_REAL TK_BOOL TK_CHAR
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
+%token TK_OP_AND TK_OP_OR
 %token TK_END TK_ERROR
 
 %start S
 
+%left TK_OP_OR
+%left TK_OP_AND
 %left TK_OP_EQUAL TK_OP_DIF
 %left '>' '<' TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL
 %left '+' '-'
 %left '*' '/' '%'
+%left '!'
 
 %%
 
@@ -157,170 +161,22 @@ COMAND 	: E ';'
 E 			: E '+' E
 			{
 				$$ = binaryOperator($1, $2, $3);
-				// $$.translation = $1.translation + $3.translation + "\t";
-
-				// if($1.type != $3.type){
-				// 	symbol temp;
-				// 	temp.name = gentempcode();
-				// 	temp.type = findComparison($1.type, $3.type, $2.label);
-				// 	$$.type = temp.type;
-				// 	$$.label = gentempcode();
-
-				// 	if(temp.type == null){
-				// 		yyerror("não é possivel fazer a operação de " + $2.label + " com os tipos " + getEnum($1.type) + " e " + getEnum($3.type));
-				// 	}
-				// 	if($1.type != temp.type){
-				// 		$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
-				// 		$$.translation += $$.label + " = " + temp.name + " " + $2.label + " " + $3.label + ";\n";
-				// 		insertTable("", temp.type, temp.name, true);
-				// 	}
-				// 	else{
-				// 		$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
-				// 		$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + temp.name + ";\n";
-				// 		insertTable("", temp.type, temp.name, true);
-				// 	}
-				// }
-				// else{
-				// 	$$.label = gentempcode();
-				// 	$$.type = $1.type;
-				// 	$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
-				// }
-
-				// insertTable("", $$.type, $$.label, true);
 			}
 			| E '-' E
 			{
 				$$ = binaryOperator($1, $2, $3);
-				
-				// $$.translation = $1.translation + $3.translation + "\t";
-
-				// if($1.type != $3.type){
-				// 	symbol temp;
-				// 	temp.name = gentempcode();
-				// 	temp.type = findComparison($1.type, $3.type, $2.label);
-				// 	$$.type = temp.type;
-				// 	$$.label = gentempcode();
-
-				// 	if(temp.type == null){
-				// 		yyerror("não é possivel fazer a operação de " + $2.label + " com os tipos " + getEnum($1.type) + " e " + getEnum($3.type));
-				// 	}
-				// 	if($1.type != temp.type){
-				// 		$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
-				// 		$$.translation += $$.label + " = " + temp.name + " " + $2.label + " " + $3.label + ";\n";
-				// 		insertTable("", temp.type, temp.name, true);
-				// 	}
-				// 	else{
-				// 		$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
-				// 		$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + temp.name + ";\n";
-				// 		insertTable("", temp.type, temp.name, true);
-				// 	}
-				// }
-				// else{
-				// 	$$.label = gentempcode();
-				// 	$$.type = $1.type;
-				// 	$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
-				// }
-
-				// insertTable("", $$.type, $$.label, true);
 			}
 			| E '*' E
 			{
-				$$.translation = $1.translation + $3.translation + "\t";
-
-				if($1.type != $3.type){
-					symbol temp;
-					temp.name = gentempcode();
-					temp.type = findComparison($1.type, $3.type, $2.label);
-					$$.type = temp.type;
-					$$.label = gentempcode();
-
-					if(temp.type == null){
-						yyerror("não é possivel fazer a operação de " + $2.label + " com os tipos " + getEnum($1.type) + " e " + getEnum($3.type));
-					}
-					if($1.type != temp.type){
-						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + temp.name + " " + $2.label + " " + $3.label + ";\n";
-						insertTable("", temp.type, temp.name, true);
-					}
-					else{
-						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + temp.name + ";\n";
-						insertTable("", temp.type, temp.name, true);
-					}
-				}
-				else{
-					$$.label = gentempcode();
-					$$.type = $1.type;
-					$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
-				}
-
-				insertTable("", $$.type, $$.label, true);
+				$$ = binaryOperator($1, $2, $3);
 			}
 			| E '/' E
 			{
-				$$.translation = $1.translation + $3.translation + "\t";
-
-				if($1.type != $3.type){
-					symbol temp;
-					temp.name = gentempcode();
-					temp.type = findComparison($1.type, $3.type, $2.label);
-					$$.type = temp.type;
-					$$.label = gentempcode();
-
-					if(temp.type == null){
-						yyerror("não é possivel fazer a operação de " + $2.label + " com os tipos " + getEnum($1.type) + " e " + getEnum($3.type));
-					}
-					if($1.type != temp.type){
-						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + temp.name + " " + $2.label + " " + $3.label + ";\n";
-						insertTable("", temp.type, temp.name, true);
-					}
-					else{
-						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + temp.name + ";\n";
-						insertTable("", temp.type, temp.name, true);
-					}
-				}
-				else{
-					$$.label = gentempcode();
-					$$.type = $1.type;
-					$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
-				}
-
-				insertTable("", $$.type, $$.label, true);
+				$$ = binaryOperator($1, $2, $3);
 			}
 			| E '%' E
 			{
-				$$.translation = $1.translation + $3.translation + "\t";
-
-				if($1.type != $3.type){
-					symbol temp;
-					temp.name = gentempcode();
-					temp.type = findComparison($1.type, $3.type, $2.label);
-					$$.type = temp.type;
-					$$.label = gentempcode();
-
-					if(temp.type == null){
-						yyerror("não é possivel fazer a operação de " + $2.label + " com os tipos " + getEnum($1.type) + " e " + getEnum($3.type));
-					}
-					if($1.type != temp.type){
-						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + temp.name + " " + $2.label + " " + $3.label + ";\n";
-						insertTable("", temp.type, temp.name, true);
-					}
-					else{
-						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
-						$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + temp.name + ";\n";
-						insertTable("", temp.type, temp.name, true);
-					}
-				}
-				else{
-					$$.label = gentempcode();
-					$$.type = $1.type;
-					$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
-				}
-
-				insertTable("", $$.type, $$.label, true);
+				$$ = binaryOperator($1, $2, $3);
 			}
 			| E '>' E
 			{
@@ -345,6 +201,30 @@ E 			: E '+' E
 			| E TK_OP_DIF E
 			{
 				$$ = relationalOperator($1, $2, $3);
+			}
+			| E TK_OP_AND E
+			{
+				$$ = binaryOperator($1, $2, $3);
+			}
+			| E TK_OP_OR E
+			{
+				$$ = binaryOperator($1, $2, $3);
+			}
+			|'!' E
+			{
+				types resultType = findComparison($2.type, null, $1.label);
+
+				if(resultType == null){
+					yyerror("não é possivel fazer a operação de " + $1.label + " com o tipo " + getEnum($2.type));
+				}
+
+				$$.translation = $2.translation + "\t";
+
+				$$.label = gentempcode();
+				$$.type = resultType;
+				$$.translation += $$.label + " = " + $1.label + $2.label + ";\n";
+
+				insertTable("", $$.type, $$.label, true);
 			}
 			| TK_ID '=' E
 			{
@@ -418,6 +298,7 @@ int main(int argc, char* argv[])
 	symbolTable.push(global);
 	list <symbol> main;
 
+	/* adding operators type rules */
 	comparisonTable["* (int-int)"] = {t_int, t_int, "*", t_int, 0};
 	comparisonTable["* (int-float)"] = {t_int, t_float, "*", t_float, 0};
 	comparisonTable["/ (int-int)"] = {t_int, t_int, "/", t_int, 0};
@@ -444,6 +325,9 @@ int main(int argc, char* argv[])
 	comparisonTable["!= (int-float)"] = {t_int, t_float, "!=", t_float, 0};
 	comparisonTable["!= (char-char)"] = {t_char, t_char, "!=", t_char, 0};
 	comparisonTable["!= (bool-bool)"] = {t_bool, t_bool, "!=", t_bool, 0};
+	comparisonTable["&& (bool-bool)"] = {t_bool, t_bool, "&&", t_bool, 0};
+	comparisonTable["|| (bool-bool)"] = {t_bool, t_bool, "||", t_bool, 0};
+	comparisonTable["! (bool)"] = {t_bool, null, "!", t_bool, 0};
 
 	symbolTable.push(main);
 
