@@ -32,7 +32,17 @@ ID {LETRA}({LETRA}|{NUM})*
 
 [(){}[\];,]	{ return *yytext; }
 
-[+\-*/%]		{yylval.label = yytext; return *yytext; }
+[+\-*/%]	{yylval.label = yytext; return *yytext; }
+
+[>\<]         {yylval.label = yytext; return *yytext; }
+
+">="        {yylval.label = yytext; return TK_OP_GREATER_EQUAL; }
+
+"<="        {yylval.label = yytext; return TK_OP_LESS_EQUAL; }
+
+"=="        {yylval.label = yytext; return TK_OP_EQUAL; }
+
+"!="        {yylval.label = yytext; return TK_OP_DIF; }
 
 "="		    { return '='; }
 
