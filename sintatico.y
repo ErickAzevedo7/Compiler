@@ -318,6 +318,8 @@ int main(int argc, char* argv[])
 	symbolTable.push(global);
 	list <symbol> main;
 
+	symbolTable.push(main);
+
 	/* adding operators type rules */
 	comparisonTable["* (int-int)"] = {t_int, t_int, "*", t_int, 0};
 	comparisonTable["* (float-float)"] = {t_float, t_float, "*", t_float, 0};
@@ -360,8 +362,6 @@ int main(int argc, char* argv[])
 	comparisonTable["|| (bool-bool)"] = {t_bool, t_bool, "||", t_bool, 0};
 	comparisonTable["! (bool)"] = {t_bool, null, "!", t_bool, 0};
 
-	symbolTable.push(main);
-
 	var_temp_qnt = 0;
 
 	yyparse();
@@ -371,12 +371,14 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+// exibe uma mensagem de erro e encerra o programa.
 void yyerror(string MSG)
 {
 	cout << MSG << endl;
 	exit (0);
 }
 
+// retorna verdadeiro se existe a variavel na tabela de simbolos, falso caso contrario.
 bool findSymbol(symbol variable){
 	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
 		if(it->istemp == false && it->name == variable.name){
@@ -387,6 +389,7 @@ bool findSymbol(symbol variable){
 	return false;
 }
 
+// retorna a variavel na tabela de simbolos correspondente ao seu nome, retorna vazio caso contrario.
 symbol getSymbol(string name){
 	symbol variable;
 
@@ -399,6 +402,7 @@ symbol getSymbol(string name){
 	return variable;
 }
 
+// exibe no terminal a tabela de simbolos no escopo atual.
 void printScope(){
 	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
 		cout << it->name << " | " << getEnum(it->type) << " | " << it->address <<  " | " << it->istemp << endl;
@@ -408,6 +412,7 @@ void printScope(){
 	return;
 }
 
+// retorna o nome dos tipos em string
 string getEnum(types type){
 	if(type == t_int)
 		return "int";
@@ -420,6 +425,7 @@ string getEnum(types type){
 	return "";
 }
 
+// adiciona na tabela uma variavel, dado um nome, tipo, endereço(apelido gerado), e um boolean para saber se eh temporaria.
 void insertTable(string name, types type, string address, bool istemp){
 	symbol variable;
 	variable.name = name;
@@ -435,6 +441,7 @@ void insertTable(string name, types type, string address, bool istemp){
 	}
 }
 
+// verifica se foi declarada a variavel.
 void existInTable(string name, types type){
 	symbol variable;
 	variable.name = name;
@@ -445,6 +452,7 @@ void existInTable(string name, types type){
 	}
 }
 
+// procura na tabela de comparações as operações com seus tipos permitidos, retorna o tipo para a conversão caso exista, retorna null caso não seja permitida essa operação.
 types findComparison(types parameter1, types parameter2, string operation){
 	for(auto it = comparisonTable.begin(); it != comparisonTable.end(); ++it){	
 		if(it->second.operation == operation && parameter1 == it->second.parameter1 &&  parameter2 == it->second.parameter2){
@@ -457,6 +465,7 @@ types findComparison(types parameter1, types parameter2, string operation){
 	return null;
 }
 
+// realiza a gramatica para operadores binarios(exceto relacionais).
 attributes binaryOperator(attributes $1, attributes $2, attributes $3){
 	types resultType = findComparison($1.type, $3.type, $2.label);
 
@@ -497,6 +506,7 @@ attributes binaryOperator(attributes $1, attributes $2, attributes $3){
 	return $$;
 }
 
+// realiza a gramatica para os operadores relacionais.
 attributes relationalOperator(attributes $1, attributes $2, attributes $3){
 	types resultType = findComparison($1.type, $3.type, $2.label);
 
