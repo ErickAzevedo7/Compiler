@@ -161,7 +161,13 @@ COMAND 		: E ';'
 			}
 			;
 
-E 			: '(' TYPE ')' E
+E 			: '(' E ')'
+			{
+				$$.type = $2.type;
+				$$.label = $2.label;
+				$$.translation = $2.translation;
+			}
+			| '(' TYPE ')' E
 			{
 				$$.type = $2.type;
 				$$.label = gentempcode();
