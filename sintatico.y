@@ -418,12 +418,16 @@ int main(int argc, char* argv[])
 	symbolTable.push(global);
 	list <symbol> main;
 
-	comparisonTable["floatCast*"] = {t_int, t_float, "*", t_float, 0};
-	comparisonTable["floatCast/"] = {t_int, t_float, "/", t_float, 0};
-	comparisonTable["floatCast%"] = {t_int, t_float, "%", t_float, 0};
-	comparisonTable["floatCast+"] = {t_int, t_float, "+", t_float, 0};
+	comparisonTable["* (int-int)"] = {t_int, t_int, "*", t_int, 0};
+	comparisonTable["* (int-float)"] = {t_int, t_float, "*", t_float, 0};
+	comparisonTable["/ (int-int)"] = {t_int, t_int, "/", t_int, 0};
+	comparisonTable["/ (int-float)"] = {t_int, t_float, "/", t_float, 0};
+	comparisonTable["% (int-int)"] = {t_int, t_int, "%", t_int, 0};
+	comparisonTable["% (int-float)"] = {t_int, t_float, "%", t_float, 0};
 	comparisonTable["+ (int-int)"] = {t_int, t_int, "+", t_int, 0};
-	comparisonTable["- (int-int)"] = {t_int, t_float, "-", t_float, 0};
+	comparisonTable["+ (int-float)"] = {t_int, t_float, "+", t_float, 0};
+	comparisonTable["- (int-int)"] = {t_int, t_int, "-", t_int, 0};
+	comparisonTable["- (int-float)"] = {t_int, t_float, "-", t_float, 0};
 	comparisonTable["> (int-int)"] = {t_int, t_int, ">", t_int, 0};
 	comparisonTable["> (int-float)"] = {t_int, t_float, ">", t_float, 0};
 	comparisonTable["< (int-int)"] = {t_int, t_int, "<", t_int, 0};
