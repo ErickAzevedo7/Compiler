@@ -10,7 +10,7 @@ LETRA [A-Za-z_]
 DELIM {ESPACO}+
 NUM {DIGITO}+
 REAL {NUM}+("."{NUM}+)?
-CHAR \'({LETRA}|{NUM})\'
+CHAR \'({LETRA}|{DIGITO})\'
 BOOL ("True"|"False")
 ID {LETRA}({LETRA}|{NUM})*
 

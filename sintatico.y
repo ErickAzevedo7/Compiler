@@ -319,18 +319,20 @@ E 			: E '+' E
 				symbol id = getSymbol($1.label);
 
 				$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
+				
+				existInTable($1.label, $1.type);
 
 				if(id.type != $3.type){
 					yyerror("Atribuição de um tipo " + getEnum($3.type) + " a uma variavel do tipo " + getEnum(id.type));
 				}
-
-				existInTable($1.label, $1.type);
 			}
 			| TK_NUM
 			{
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 				$$.type = t_int;
+
+				cout << $1.label << endl;
 
 				insertTable("", $$.type, $$.label, true);
 			}
