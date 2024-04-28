@@ -69,7 +69,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 
 %start S
 
-%left '>'
+%left '>' TK_OP_GREATER_EQUAL
 %left '+' '-'
 %left '*' '/' '%'
 
