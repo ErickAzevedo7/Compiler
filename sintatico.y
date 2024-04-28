@@ -332,8 +332,6 @@ E 			: E '+' E
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 				$$.type = t_int;
 
-				cout << $1.label << endl;
-
 				insertTable("", $$.type, $$.label, true);
 			}
 			| TK_REAL
