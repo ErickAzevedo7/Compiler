@@ -64,12 +64,13 @@ attributes relationalOperator(attributes, attributes, attributes);
 
 %token TK_NUM TK_REAL TK_BOOL TK_CHAR
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
-%token TK_OP_GREATER_EQUAL
+%token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
 %token TK_END TK_ERROR
 
 %start S
 
-%left '>' TK_OP_GREATER_EQUAL
+%left TK_OP_EQUAL TK_OP_DIF
+%left '>' '<' TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL
 %left '+' '-'
 %left '*' '/' '%'
 
@@ -325,7 +326,23 @@ E 			: E '+' E
 			{
 				$$ = relationalOperator($1, $2, $3);
 			}
+			| E '<' E
+			{
+				$$ = relationalOperator($1, $2, $3);
+			}
 			| E TK_OP_GREATER_EQUAL E
+			{
+				$$ = relationalOperator($1, $2, $3);
+			}
+			| E TK_OP_LESS_EQUAL E
+			{
+				$$ = relationalOperator($1, $2, $3);
+			}
+			| E TK_OP_EQUAL E
+			{
+				$$ = relationalOperator($1, $2, $3);
+			}
+			| E TK_OP_DIF E
 			{
 				$$ = relationalOperator($1, $2, $3);
 			}
@@ -409,8 +426,20 @@ int main(int argc, char* argv[])
 	comparisonTable["- (int-int)"] = {t_int, t_float, "-", t_float, 0};
 	comparisonTable["> (int-int)"] = {t_int, t_int, ">", t_int, 0};
 	comparisonTable["> (int-float)"] = {t_int, t_float, ">", t_float, 0};
+	comparisonTable["< (int-int)"] = {t_int, t_int, "<", t_int, 0};
+	comparisonTable["< (int-float)"] = {t_int, t_float, "<", t_float, 0};
 	comparisonTable[">= (int-int)"] = {t_int, t_int, ">=", t_int, 0};
 	comparisonTable[">= (int-float)"] = {t_int, t_float, ">=", t_float, 0};
+	comparisonTable["<= (int-int)"] = {t_int, t_int, "<=", t_int, 0};
+	comparisonTable["<= (int-float)"] = {t_int, t_float, "<=", t_float, 0};
+	comparisonTable["== (int-int)"] = {t_int, t_int, "==", t_int, 0};
+	comparisonTable["== (int-float)"] = {t_int, t_float, "==", t_float, 0};
+	comparisonTable["== (char-char)"] = {t_char, t_char, "==", t_char, 0};
+	comparisonTable["== (bool-bool)"] = {t_bool, t_bool, "==", t_bool, 0};
+	comparisonTable["!= (int-int)"] = {t_int, t_int, "!=", t_int, 0};
+	comparisonTable["!= (int-float)"] = {t_int, t_float, "!=", t_float, 0};
+	comparisonTable["!= (char-char)"] = {t_char, t_char, "!=", t_char, 0};
+	comparisonTable["!= (bool-bool)"] = {t_bool, t_bool, "!=", t_bool, 0};
 
 	symbolTable.push(main);
 
