@@ -77,6 +77,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 %left '+' '-'
 %left '*' '/' '%'
 %left '!'
+%left '(' ')'
 
 %%
 
@@ -110,7 +111,7 @@ BLOCK		: '{' COMANDS '}'
 			}
 			;
 
-COMANDS	: COMAND COMANDS
+COMANDS		: COMAND COMANDS
 			{
 				$$.translation = $1.translation + $2.translation;
 			}
@@ -120,37 +121,39 @@ COMANDS	: COMAND COMANDS
 			}
 			;
 
-COMAND 	: E ';'
-			{
-				$$ = $1;
-			}
-			| TK_TYPE_INT TK_ID ';'
+TYPE 		: TK_TYPE_INT
 			{
 				$$.type = t_int;
 				$$.label = "";
 				$$.translation = "";
-
-				insertTable($2.label, $$.type, gentempcode(), false);
 			}
-			| TK_TYPE_FLOAT TK_ID ';'
+			| TK_TYPE_FLOAT
 			{
 				$$.type = t_float;
 				$$.label = "";
 				$$.translation = "";
-
-				insertTable($2.label, $$.type, gentempcode(), false);
 			}
-			| TK_TYPE_BOOL TK_ID ';'
+			| TK_TYPE_BOOL
 			{
 				$$.type = t_bool;
 				$$.label = "";
-				$$.translation = "";
-
-				insertTable($2.label, $$.type, gentempcode(), false);
+				$$.translation = "";				
 			}
-			| TK_TYPE_CHAR TK_ID ';'
+			| TK_TYPE_CHAR
 			{
 				$$.type = t_char;
+				$$.label = "";
+				$$.translation = "";				
+			}
+			;
+
+COMAND 		: E ';'
+			{
+				$$ = $1;
+			}
+			| TYPE TK_ID ';'
+			{
+				$$.type = $1.type;
 				$$.label = "";
 				$$.translation = "";
 
@@ -158,7 +161,16 @@ COMAND 	: E ';'
 			}
 			;
 
-E 			: E '+' E
+E 			: '(' TYPE ')' E
+			{
+				$$.type = $2.type;
+				$$.label = gentempcode();
+
+				$$.translation = $4.translation + "\t" + $$.label + " = " + "(" + getEnum($2.type) + ") " + $4.label + ";\n";
+
+				insertTable("", $$.type, $$.label, true);	
+			}
+			| E '+' E
 			{
 				$$ = binaryOperator($1, $2, $3);
 			}
@@ -230,6 +242,8 @@ E 			: E '+' E
 			{
 				symbol id = getSymbol($1.label);
 
+				$$.label = id.address;
+				$$.type = id.type;
 				$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
 				
 				existInTable($1.label, $1.type);
@@ -272,10 +286,10 @@ E 			: E '+' E
 			}
 			| TK_ID
 			{
-				symbol variable = getSymbol($1.label);
-				$$.label = variable.address;
+				symbol id = getSymbol($1.label);
+				$$.label = id.address;
 				$$.translation = "";
-				$$.type = variable.type;
+				$$.type = id.type;
 
 				existInTable($1.label, $1.type);
 			}
@@ -300,28 +314,39 @@ int main(int argc, char* argv[])
 
 	/* adding operators type rules */
 	comparisonTable["* (int-int)"] = {t_int, t_int, "*", t_int, 0};
+	comparisonTable["* (float-float)"] = {t_float, t_float, "*", t_float, 0};
 	comparisonTable["* (int-float)"] = {t_int, t_float, "*", t_float, 0};
 	comparisonTable["/ (int-int)"] = {t_int, t_int, "/", t_int, 0};
+	comparisonTable["/ (float-float)"] = {t_float, t_float, "/", t_float, 0};
 	comparisonTable["/ (int-float)"] = {t_int, t_float, "/", t_float, 0};
 	comparisonTable["% (int-int)"] = {t_int, t_int, "%", t_int, 0};
+	comparisonTable["% (float-float)"] = {t_float, t_float, "%", t_float, 0};
 	comparisonTable["% (int-float)"] = {t_int, t_float, "%", t_float, 0};
 	comparisonTable["+ (int-int)"] = {t_int, t_int, "+", t_int, 0};
+	comparisonTable["+ (float-float)"] = {t_float, t_float, "+", t_float, 0};
 	comparisonTable["+ (int-float)"] = {t_int, t_float, "+", t_float, 0};
 	comparisonTable["- (int-int)"] = {t_int, t_int, "-", t_int, 0};
+	comparisonTable["- (float-float)"] = {t_float, t_float, "-", t_float, 0};
 	comparisonTable["- (int-float)"] = {t_int, t_float, "-", t_float, 0};
 	comparisonTable["> (int-int)"] = {t_int, t_int, ">", t_int, 0};
+	comparisonTable["> (float-float)"] = {t_float, t_float, ">", t_float, 0};
 	comparisonTable["> (int-float)"] = {t_int, t_float, ">", t_float, 0};
 	comparisonTable["< (int-int)"] = {t_int, t_int, "<", t_int, 0};
+	comparisonTable["< (float-float)"] = {t_float, t_float, "<", t_float, 0};
 	comparisonTable["< (int-float)"] = {t_int, t_float, "<", t_float, 0};
 	comparisonTable[">= (int-int)"] = {t_int, t_int, ">=", t_int, 0};
+	comparisonTable[">= (float-float)"] = {t_float, t_float, ">=", t_float, 0};
 	comparisonTable[">= (int-float)"] = {t_int, t_float, ">=", t_float, 0};
 	comparisonTable["<= (int-int)"] = {t_int, t_int, "<=", t_int, 0};
+	comparisonTable["<= (float-float)"] = {t_float, t_float, "<=", t_float, 0};
 	comparisonTable["<= (int-float)"] = {t_int, t_float, "<=", t_float, 0};
 	comparisonTable["== (int-int)"] = {t_int, t_int, "==", t_int, 0};
+	comparisonTable["== (float-float)"] = {t_float, t_float, "==", t_float, 0};
 	comparisonTable["== (int-float)"] = {t_int, t_float, "==", t_float, 0};
 	comparisonTable["== (char-char)"] = {t_char, t_char, "==", t_char, 0};
 	comparisonTable["== (bool-bool)"] = {t_bool, t_bool, "==", t_bool, 0};
 	comparisonTable["!= (int-int)"] = {t_int, t_int, "!=", t_int, 0};
+	comparisonTable["!= (float-float)"] = {t_float, t_float, "!=", t_float, 0};
 	comparisonTable["!= (int-float)"] = {t_int, t_float, "!=", t_float, 0};
 	comparisonTable["!= (char-char)"] = {t_char, t_char, "!=", t_char, 0};
 	comparisonTable["!= (bool-bool)"] = {t_bool, t_bool, "!=", t_bool, 0};
