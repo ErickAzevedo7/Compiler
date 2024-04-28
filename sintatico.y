@@ -123,14 +123,6 @@ COMAND 	: E ';'
 
 				insertTable($2.label, $$.type, gentempcode(), false);
 			}
-			| TK_TYPE_CHAR TK_ID ';'
-			{
-				$$.type = t_char;
-				$$.label = "";
-				$$.translation = "";
-
-				insertTable($2.label, $$.type, gentempcode(), false);
-			}
 			| TK_TYPE_FLOAT TK_ID ';'
 			{
 				$$.type = t_float;
@@ -150,22 +142,6 @@ COMAND 	: E ';'
 			| TK_TYPE_CHAR TK_ID ';'
 			{
 				$$.type = t_char;
-				$$.label = "";
-				$$.translation = "";
-
-				insertTable($2.label, $$.type, gentempcode(), false);
-			}
-			| TK_TYPE_FLOAT TK_ID ';'
-			{
-				$$.type = t_float;
-				$$.label = "";
-				$$.translation = "";
-
-				insertTable($2.label, $$.type, gentempcode(), false);
-			}
-			| TK_TYPE_BOOL TK_ID ';'
-			{
-				$$.type = t_bool;
 				$$.label = "";
 				$$.translation = "";
 
