@@ -66,7 +66,7 @@ string gentempcode();
 %start S
 
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 
 %%
 
@@ -272,6 +272,39 @@ E 			: E '+' E
 
 				insertTable("", $$.type, $$.label, true);
 			}
+			| E '%' E
+			{
+				$$.translation = $1.translation + $3.translation + "\t";
+
+				if($1.type != $3.type){
+					symbol temp;
+					temp.name = gentempcode();
+					temp.type = findComparison($1.type, $3.type, $2.label);
+					$$.type = temp.type;
+					$$.label = gentempcode();
+
+					if(temp.type == null){
+						yyerror("não é possivel fazer a operação de " + $2.label + " com os tipos " + getEnum($1.type) + " e " + getEnum($3.type));
+					}
+					if($1.type != temp.type){
+						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $1.label + ";\n" + "\t";
+						$$.translation += $$.label + " = " + temp.name + " " + $2.label + " " + $3.label + ";\n";
+						insertTable("", temp.type, temp.name, true);
+					}
+					else{
+						$$.translation += temp.name + " = " + "(" + getEnum(temp.type) + ") " + $3.label + ";\n" + "\t";
+						$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + temp.name + ";\n";
+						insertTable("", temp.type, temp.name, true);
+					}
+				}
+				else{
+					$$.label = gentempcode();
+					$$.type = $1.type;
+					$$.translation += $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
+				}
+
+				insertTable("", $$.type, $$.label, true);
+			}
 			| TK_ID '=' E
 			{
 				symbol id = getSymbol($1.label);
@@ -338,6 +371,7 @@ int main(int argc, char* argv[])
 
 	comparisonTable["floatCast*"] = {t_int, t_float, "*", t_float, 0};
 	comparisonTable["floatCast/"] = {t_int, t_float, "/", t_float, 0};
+	comparisonTable["floatCast%"] = {t_int, t_float, "%", t_float, 0};
 	comparisonTable["floatCast+"] = {t_int, t_float, "+", t_float, 0};
 	comparisonTable["floatCast-"] = {t_int, t_float, "-", t_float, 0};
 
