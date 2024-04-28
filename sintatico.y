@@ -17,6 +17,7 @@ enum types{
 	t_int = 1,
 	t_float = 2,
 	t_bool = 3,
+	t_char = 4,
 };
 
 struct attributes
@@ -59,8 +60,8 @@ string getEnum(types);
 string gentempcode();
 %}
 
-%token TK_NUM TK_REAL TK_BOOL
-%token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL
+%token TK_NUM TK_REAL TK_BOOL TK_CHAR
+%token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_END TK_ERROR
 
 %start S
@@ -133,6 +134,14 @@ COMAND 	: E ';'
 			| TK_TYPE_BOOL TK_ID ';'
 			{
 				$$.type = t_bool;
+				$$.label = "";
+				$$.translation = "";
+
+				insertTable($2.label, $$.type, gentempcode(), false);
+			}
+			| TK_TYPE_CHAR TK_ID ';'
+			{
+				$$.type = t_char;
 				$$.label = "";
 				$$.translation = "";
 
@@ -310,12 +319,12 @@ E 			: E '+' E
 				symbol id = getSymbol($1.label);
 
 				$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
+				
+				existInTable($1.label, $1.type);
 
 				if(id.type != $3.type){
 					yyerror("Atribuição de um tipo " + getEnum($3.type) + " a uma variavel do tipo " + getEnum(id.type));
 				}
-
-				existInTable($1.label, $1.type);
 			}
 			| TK_NUM
 			{
@@ -338,6 +347,14 @@ E 			: E '+' E
 				$$.label = gentempcode();
 				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
 				$$.type = t_bool;
+
+				insertTable("", $$.type, $$.label, true);
+			}
+			| TK_CHAR
+			{
+				$$.label = gentempcode();
+				$$.translation = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.type = t_char;
 
 				insertTable("", $$.type, $$.label, true);
 			}
@@ -430,6 +447,8 @@ string getEnum(types type){
 		return "float";
 	else if(type == t_bool)
 		return "bool";
+	else if(type == t_char)
+		return "char";
 	return "";
 }
 

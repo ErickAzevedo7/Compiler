@@ -10,7 +10,7 @@ LETRA [A-Za-z_]
 DELIM {ESPACO}+
 NUM {DIGITO}+
 REAL {NUM}+("."{NUM}+)?
-CHAR \'({LETRA}|{NUM})\'
+CHAR \'({LETRA}|{DIGITO})\'
 BOOL ("True"|"False")
 ID {LETRA}({LETRA}|{NUM})*
 
@@ -28,6 +28,8 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "bool"      {return TK_TYPE_BOOL;}
 
+"char"      {return TK_TYPE_CHAR;}
+
 [(){}[\];,]	{ return *yytext; }
 
 [+\-*/%]		{yylval.label = yytext; return *yytext; }
@@ -38,7 +40,7 @@ ID {LETRA}({LETRA}|{NUM})*
 {BOOL}      { yylval.label = yytext; return TK_BOOL; }
 {ID}		{ yylval.label = yytext; return TK_ID; }
 {REAL}		{ yylval.label = yytext; return TK_REAL; }
-
+{CHAR}      { yylval.label = yytext; return TK_CHAR; }
 .			{ *yytext; }
 
 %%
