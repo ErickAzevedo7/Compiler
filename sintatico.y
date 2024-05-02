@@ -81,7 +81,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 
 %%
 
-S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
+S 			: COMANDS
 			{
 				string code = "/*AERITH Compiler*/\n"
 								"#include <iostream>\n"
@@ -96,7 +96,7 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 					code += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
 				}
 								
-				code += "\n" + $5.translation;
+				code += "\n" + $1.translation;
 								
 				code += 	"\treturn 0;"
 							"\n}";
