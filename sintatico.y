@@ -178,6 +178,22 @@ COMAND 		: E ';'
 				$$.translation += $5.translation;
 				$$.translation += "\t" + end + ":\n";
 			}
+			| TK_IF '(' E ')' BLOCK TK_ELSE BLOCK
+			{
+				string ELSE = gentemplabel();
+				string end = gentemplabel();
+
+				if($3.type != t_bool){
+					yyerror($1.label + " apenas aceita o tipo bool");
+				}
+
+				$$.translation = $3.translation + "\t" + $1.label + " (!" + $3.label + ")" + "{" + " go to " + ELSE + ";}" + "\n";
+				$$.translation += $5.translation;
+				$$.translation += "\t" "go to " + end + ";\n";
+				$$.translation += "\t" + ELSE + ":\n";
+				$$.translation += $7.translation;
+				$$.translation += "\t" + end + ":\n";
+			}
 			;
 
 E 			: '(' E ')'
@@ -497,7 +513,6 @@ types findComparison(types parameter1, types parameter2, string operation){
 	for(auto it = comparisonTable.begin(); it != comparisonTable.end(); ++it){
 		if(it->second.orderMatters == 1){
 			if(it->second.operation == operation && parameter1 == it->second.parameter1 &&  parameter2 == it->second.parameter2){
-				cout << "ok" << endl;
 				return it->second.action;
 			}
 		}
