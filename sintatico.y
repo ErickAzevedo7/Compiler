@@ -269,13 +269,22 @@ E 			: '(' E ')'
 
 				$$.label = id.address;
 				$$.type = id.type;
-				$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
-				
+
+				types resultType = findComparison($$.type, $3.type, $2.label);
+
+				if(resultType == null){
+					yyerror("não é possivel converter " + getEnum($3.type) + " para o tipo " + getEnum($$.type));
+				}
+
+				if($3.type != $$.type){
+					$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + "(" + getEnum($$.type)+ ") " + $3.label + ";\n";
+				}
+				else{
+					$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
+				}
+					
 				existInTable($1.label, $1.type);
 
-				if(id.type != $3.type){
-					yyerror("Atribuição de um tipo " + getEnum($3.type) + " a uma variavel do tipo " + getEnum(id.type));
-				}
 			}
 			| TK_NUM
 			{
@@ -334,6 +343,11 @@ int main(int argc, char* argv[])
 	symbolTable.push(main);
 
 	/* adding operators type rules */
+	comparisonTable["= (int-int)"] = {t_int, t_int, "=", t_int, 1};
+	comparisonTable["= (float-float)"] = {t_float, t_float, "=", t_float, 1};
+	comparisonTable["= (float-int)"] = {t_float, t_int, "=", t_float, 1};
+	comparisonTable["= (bool-bool)"] = {t_bool, t_bool, "=", t_bool, 1};
+	comparisonTable["= (char-char)"] = {t_char, t_char, "=", t_char, 1};
 	comparisonTable["* (int-int)"] = {t_int, t_int, "*", t_int, 0};
 	comparisonTable["* (float-float)"] = {t_float, t_float, "*", t_float, 0};
 	comparisonTable["* (int-float)"] = {t_int, t_float, "*", t_float, 0};
@@ -480,13 +494,21 @@ void existInTable(string name, types type){
 
 // procura na tabela de comparações as operações com seus tipos permitidos, retorna o tipo para a conversão caso exista, retorna null caso não seja permitida essa operação.
 types findComparison(types parameter1, types parameter2, string operation){
-	for(auto it = comparisonTable.begin(); it != comparisonTable.end(); ++it){	
-		if(it->second.operation == operation && parameter1 == it->second.parameter1 &&  parameter2 == it->second.parameter2){
-			return it->second.action;
+	for(auto it = comparisonTable.begin(); it != comparisonTable.end(); ++it){
+		if(it->second.orderMatters == 1){
+			if(it->second.operation == operation && parameter1 == it->second.parameter1 &&  parameter2 == it->second.parameter2){
+				cout << "ok" << endl;
+				return it->second.action;
+			}
 		}
-		if(it->second.operation == operation && parameter1 == it->second.parameter2 &&  parameter2 == it->second.parameter1){
-			return it->second.action;
-		}
+		else{
+			if(it->second.operation == operation && parameter1 == it->second.parameter1 &&  parameter2 == it->second.parameter2){
+				return it->second.action;
+			}
+			if(it->second.operation == operation && parameter1 == it->second.parameter2 &&  parameter2 == it->second.parameter1){
+				return it->second.action;
+			}
+		}	
 	}
 	return null;
 }
