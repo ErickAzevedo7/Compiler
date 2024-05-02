@@ -22,6 +22,9 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "main"		{return TK_MAIN;}
 
+"if"        {yylval.label = yytext; return TK_IF;}
+"else"        {yylval.label = yytext; return TK_ELSE;}
+
  /* variables types */
 "int"		{return TK_TYPE_INT;}
 "float"     {return TK_TYPE_FLOAT;}

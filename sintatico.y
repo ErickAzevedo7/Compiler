@@ -66,6 +66,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
 %token TK_OP_AND TK_OP_OR
+%token TK_IF TK_ELSE
 %token TK_END TK_ERROR
 
 %start S
@@ -108,6 +109,10 @@ S 			: COMANDS
 BLOCK		: '{' COMANDS '}'
 			{
 				$$.translation = $2.translation;
+			}
+			| COMAND
+			{
+				$$.translation = $1.translation;
 			}
 			;
 
@@ -158,6 +163,13 @@ COMAND 		: E ';'
 				$$.translation = "";
 
 				insertTable($2.label, $$.type, gentempcode(), false);
+			}
+			| TK_IF '(' E ')' BLOCK
+			{
+				if($3.type != t_bool){
+					yyerror($1.label + " apenas aceita o tipo bool");
+				}
+				$$.translation = $3.translation + "\t" + $1.label + " (" + $3.label + ")\n";
 			}
 			;
 
