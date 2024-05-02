@@ -11,6 +11,7 @@
 using namespace std;
 
 int var_temp_qnt;
+int label_temp_qnt;
 
 enum types{
 	null = 0,
@@ -58,6 +59,7 @@ void printScope();
 types findComparison(types, types, string);
 string getEnum(types);
 string gentempcode();
+string gentemplabel();
 attributes binaryOperator(attributes, attributes, attributes);
 attributes relationalOperator(attributes, attributes, attributes);
 %}
@@ -66,6 +68,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
 %token TK_OP_AND TK_OP_OR
+%token TK_IF TK_ELSE
 %token TK_END TK_ERROR
 
 %start S
@@ -81,7 +84,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 
 %%
 
-S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
+S 			: COMANDS
 			{
 				string code = "/*AERITH Compiler*/\n"
 								"#include <iostream>\n"
@@ -96,7 +99,7 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 					code += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
 				}
 								
-				code += "\n" + $5.translation;
+				code += "\n" + $1.translation;
 								
 				code += 	"\treturn 0;"
 							"\n}";
@@ -108,6 +111,10 @@ S 			: TK_TYPE_INT TK_MAIN '(' ')' BLOCK
 BLOCK		: '{' COMANDS '}'
 			{
 				$$.translation = $2.translation;
+			}
+			| COMAND
+			{
+				$$.translation = $1.translation;
 			}
 			;
 
@@ -158,6 +165,34 @@ COMAND 		: E ';'
 				$$.translation = "";
 
 				insertTable($2.label, $$.type, gentempcode(), false);
+			}
+			| TK_IF '(' E ')' BLOCK
+			{
+				string end = gentemplabel();
+
+				if($3.type != t_bool){
+					yyerror($1.label + " apenas aceita o tipo bool");
+				}
+
+				$$.translation = $3.translation + "\t" + $1.label + " (!" + $3.label + ")" + "{" + " go to " + end + ";}" + "\n";
+				$$.translation += $5.translation;
+				$$.translation += "\t" + end + ":\n";
+			}
+			| TK_IF '(' E ')' BLOCK TK_ELSE BLOCK
+			{
+				string ELSE = gentemplabel();
+				string end = gentemplabel();
+
+				if($3.type != t_bool){
+					yyerror($1.label + " apenas aceita o tipo bool");
+				}
+
+				$$.translation = $3.translation + "\t" + $1.label + " (!" + $3.label + ")" + "{" + " go to " + ELSE + ";}" + "\n";
+				$$.translation += $5.translation;
+				$$.translation += "\t" "go to " + end + ";\n";
+				$$.translation += "\t" + ELSE + ":\n";
+				$$.translation += $7.translation;
+				$$.translation += "\t" + end + ":\n";
 			}
 			;
 
@@ -250,13 +285,22 @@ E 			: '(' E ')'
 
 				$$.label = id.address;
 				$$.type = id.type;
-				$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
-				
+
+				types resultType = findComparison($$.type, $3.type, $2.label);
+
+				if(resultType == null){
+					yyerror("não é possivel converter " + getEnum($3.type) + " para o tipo " + getEnum($$.type));
+				}
+
+				if($3.type != $$.type){
+					$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + "(" + getEnum($$.type)+ ") " + $3.label + ";\n";
+				}
+				else{
+					$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
+				}
+					
 				existInTable($1.label, $1.type);
 
-				if(id.type != $3.type){
-					yyerror("Atribuição de um tipo " + getEnum($3.type) + " a uma variavel do tipo " + getEnum(id.type));
-				}
 			}
 			| TK_NUM
 			{
@@ -307,12 +351,6 @@ E 			: '(' E ')'
 
 int yyparse();
 
-string gentempcode()
-{
-	var_temp_qnt++;
-	return "t" + to_string(var_temp_qnt);
-}
-
 int main(int argc, char* argv[])
 {
 	symbolTable.push(global);
@@ -321,6 +359,11 @@ int main(int argc, char* argv[])
 	symbolTable.push(main);
 
 	/* adding operators type rules */
+	comparisonTable["= (int-int)"] = {t_int, t_int, "=", t_int, 1};
+	comparisonTable["= (float-float)"] = {t_float, t_float, "=", t_float, 1};
+	comparisonTable["= (float-int)"] = {t_float, t_int, "=", t_float, 1};
+	comparisonTable["= (bool-bool)"] = {t_bool, t_bool, "=", t_bool, 1};
+	comparisonTable["= (char-char)"] = {t_char, t_char, "=", t_char, 1};
 	comparisonTable["* (int-int)"] = {t_int, t_int, "*", t_int, 0};
 	comparisonTable["* (float-float)"] = {t_float, t_float, "*", t_float, 0};
 	comparisonTable["* (int-float)"] = {t_int, t_float, "*", t_float, 0};
@@ -369,6 +412,18 @@ int main(int argc, char* argv[])
 	printScope();
 
 	return 0;
+}
+
+string gentempcode()
+{
+	var_temp_qnt++;
+	return "t" + to_string(var_temp_qnt);
+}
+
+string gentemplabel()
+{
+	label_temp_qnt++;
+	return "label" + to_string(label_temp_qnt);
 }
 
 // exibe uma mensagem de erro e encerra o programa.
@@ -455,13 +510,20 @@ void existInTable(string name, types type){
 
 // procura na tabela de comparações as operações com seus tipos permitidos, retorna o tipo para a conversão caso exista, retorna null caso não seja permitida essa operação.
 types findComparison(types parameter1, types parameter2, string operation){
-	for(auto it = comparisonTable.begin(); it != comparisonTable.end(); ++it){	
-		if(it->second.operation == operation && parameter1 == it->second.parameter1 &&  parameter2 == it->second.parameter2){
-			return it->second.action;
+	for(auto it = comparisonTable.begin(); it != comparisonTable.end(); ++it){
+		if(it->second.orderMatters == 1){
+			if(it->second.operation == operation && parameter1 == it->second.parameter1 &&  parameter2 == it->second.parameter2){
+				return it->second.action;
+			}
 		}
-		if(it->second.operation == operation && parameter1 == it->second.parameter2 &&  parameter2 == it->second.parameter1){
-			return it->second.action;
-		}
+		else{
+			if(it->second.operation == operation && parameter1 == it->second.parameter1 &&  parameter2 == it->second.parameter2){
+				return it->second.action;
+			}
+			if(it->second.operation == operation && parameter1 == it->second.parameter2 &&  parameter2 == it->second.parameter1){
+				return it->second.action;
+			}
+		}	
 	}
 	return null;
 }

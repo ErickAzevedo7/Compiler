@@ -22,6 +22,9 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "main"		{return TK_MAIN;}
 
+"if"        {yylval.label = yytext; return TK_IF;}
+"else"        {yylval.label = yytext; return TK_ELSE;}
+
  /* variables types */
 "int"		{return TK_TYPE_INT;}
 "float"     {return TK_TYPE_FLOAT;}
@@ -45,13 +48,13 @@ ID {LETRA}({LETRA}|{NUM})*
 "&&"        {yylval.label = yytext; return TK_OP_AND; }
 "||"        {yylval.label = yytext; return TK_OP_OR; }
 
-"="		    { return '='; }
+"="		    { yylval.label = yytext; return '='; }
 
 {NUM}		{ yylval.label = yytext; return TK_NUM; }
 {BOOL}      { yylval.label = yytext; return TK_BOOL; }
 {ID}		{ yylval.label = yytext; return TK_ID; }
 {REAL}		{ yylval.label = yytext; return TK_REAL; }
 {CHAR}      { yylval.label = yytext; return TK_CHAR; }
-.			{ *yytext; }
+.			{ return *yytext; }
 
 %%
