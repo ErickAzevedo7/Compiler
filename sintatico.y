@@ -11,6 +11,7 @@
 using namespace std;
 
 int var_temp_qnt;
+int label_temp_qnt;
 
 enum types{
 	null = 0,
@@ -58,6 +59,7 @@ void printScope();
 types findComparison(types, types, string);
 string getEnum(types);
 string gentempcode();
+string gentemplabel();
 attributes binaryOperator(attributes, attributes, attributes);
 attributes relationalOperator(attributes, attributes, attributes);
 %}
@@ -166,10 +168,15 @@ COMAND 		: E ';'
 			}
 			| TK_IF '(' E ')' BLOCK
 			{
+				string end = gentemplabel();
+
 				if($3.type != t_bool){
 					yyerror($1.label + " apenas aceita o tipo bool");
 				}
-				$$.translation = $3.translation + "\t" + $1.label + " (" + $3.label + ")\n";
+
+				$$.translation = $3.translation + "\t" + $1.label + " (!" + $3.label + ")" + "{" + " go to " + end + ";}" + "\n";
+				$$.translation += $5.translation;
+				$$.translation += "\t" + end + ":\n";
 			}
 			;
 
@@ -319,12 +326,6 @@ E 			: '(' E ')'
 
 int yyparse();
 
-string gentempcode()
-{
-	var_temp_qnt++;
-	return "t" + to_string(var_temp_qnt);
-}
-
 int main(int argc, char* argv[])
 {
 	symbolTable.push(global);
@@ -381,6 +382,18 @@ int main(int argc, char* argv[])
 	printScope();
 
 	return 0;
+}
+
+string gentempcode()
+{
+	var_temp_qnt++;
+	return "t" + to_string(var_temp_qnt);
+}
+
+string gentemplabel()
+{
+	label_temp_qnt++;
+	return "label" + to_string(label_temp_qnt);
 }
 
 // exibe uma mensagem de erro e encerra o programa.
