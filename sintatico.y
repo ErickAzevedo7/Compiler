@@ -113,7 +113,7 @@ BEGIN_BLOCK : '{'
 				list<symbol> block;
 
 				symbolTable.push(block);
-				$$.translation = $1.label;
+				$$.translation = "";
 			}
 
 BLOCK		: BEGIN_BLOCK COMANDS '}'
@@ -186,14 +186,19 @@ COMAND 		: E ';'
 			| TK_IF '(' E ')' BLOCK
 			{
 				string end = gentemplabel();
+				$$.label = gentempcode();
+				$$.type = $3.type;
 
-				if($3.type != t_bool){
+				if($$.type != t_bool){
 					yyerror($1.label + " apenas aceita o tipo bool");
 				}
 
-				$$.translation = $3.translation + "\t" + $1.label + " (!" + $3.label + ")" + "{" + " go to " + end + ";}" + "\n";
+				$$.translation = $3.translation + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
+				$$.translation += "\t" + $1.label + " (" + $$.label + ")" + " goto " + end + ";" + "\n";
 				$$.translation += $5.translation;
 				$$.translation += "\t" + end + ":\n";
+
+				insertTable("", $$.type, $$.label, true);
 			}
 			| TK_IF '(' E ')' BLOCK TK_ELSE BLOCK
 			{
