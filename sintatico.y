@@ -108,9 +108,22 @@ S 			: COMANDS
 			}
 			;
 
-BLOCK		: '{' COMANDS '}'
+BEGIN_BLOCK : '{'
 			{
-				$$.translation = $2.translation;
+				list<symbol> block;
+
+				symbolTable.push(block);
+				$$.translation = $1.label;
+			}
+
+BLOCK		: BEGIN_BLOCK COMANDS '}'
+			{
+				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+					$$.translation += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
+				}
+
+				$$.translation += $2.translation;
+				symbolTable.pop();
 			}
 			| COMAND
 			{
@@ -119,6 +132,10 @@ BLOCK		: '{' COMANDS '}'
 			;
 
 COMANDS		: COMAND COMANDS
+			{
+				$$.translation = $1.translation + $2.translation;
+			}
+			| BLOCK COMANDS
 			{
 				$$.translation = $1.translation + $2.translation;
 			}
@@ -354,9 +371,6 @@ int yyparse();
 int main(int argc, char* argv[])
 {
 	symbolTable.push(global);
-	list <symbol> main;
-
-	symbolTable.push(main);
 
 	/* adding operators type rules */
 	comparisonTable["= (int-int)"] = {t_int, t_int, "=", t_int, 1};
