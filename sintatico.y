@@ -36,6 +36,11 @@ typedef struct{
 }symbol;
 
 typedef struct{
+	void *staticlink;
+	list <symbol> table;
+}activationRecord;
+
+typedef struct{
 	types parameter1;
 	types parameter2;
 	string operation;
@@ -47,11 +52,12 @@ map<string, comparison> comparisonTable;
 
 list <symbol> global;
 
-stack< list<symbol> > symbolTable;
+stack< activationRecord > symbolTable;
 
 int yylex(void);
 void yyerror(string);
 bool findSymbol(symbol);
+bool findSymbolOneScope(symbol);
 symbol getSymbol(string);
 void insertTable(string, types, string, bool);
 void existInTable(string, types);
@@ -95,7 +101,7 @@ S 			: COMANDS
 								"#define False 0\n"
 								"int main(void) {\n";
 
-				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
 					code += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
 				}
 								
@@ -110,18 +116,22 @@ S 			: COMANDS
 
 BEGIN_BLOCK : '{'
 			{
+				activationRecord newActivationRecord;
 				list<symbol> block;
+				newActivationRecord.staticlink = &symbolTable.top();
+				newActivationRecord.table = block;
 
-				symbolTable.push(block);
+				symbolTable.push(newActivationRecord);
 				$$.translation = "";
 			}
 
 BLOCK		: BEGIN_BLOCK COMANDS '}'
 			{
-				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
 					$$.translation += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
 				}
 
+				printScope();
 				$$.translation += $2.translation;
 				symbolTable.pop();
 			}
@@ -313,6 +323,8 @@ E 			: '(' E ')'
 				$$.label = id.address;
 				$$.type = id.type;
 
+				existInTable($1.label, $1.type);
+
 				types resultType = findComparison($$.type, $3.type, $2.label);
 
 				if(resultType == null){
@@ -325,8 +337,6 @@ E 			: '(' E ')'
 				else{
 					$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
 				}
-					
-				existInTable($1.label, $1.type);
 
 			}
 			| TK_NUM
@@ -380,7 +390,12 @@ int yyparse();
 
 int main(int argc, char* argv[])
 {
-	symbolTable.push(global);
+	activationRecord first;
+
+	first.table = global;
+	first.staticlink = NULL;
+
+	symbolTable.push(first);
 
 	/* adding operators type rules */
 	comparisonTable["= (int-int)"] = {t_int, t_int, "=", t_int, 1};
@@ -457,9 +472,27 @@ void yyerror(string MSG)
 	exit (0);
 }
 
-// retorna verdadeiro se existe a variavel na tabela de simbolos, falso caso contrario.
+// retorna verdadeiro se existe a variavel em todas as tabelas de simbolos, falso caso contrario.
 bool findSymbol(symbol variable){
-	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+	activationRecord *A = &symbolTable.top();
+
+	while(A != NULL){
+		for(auto it = A->table.begin(); it != A->table.end(); ++it){
+			if(it->istemp == false && it->name == variable.name){
+				return true;
+			}	
+		}
+
+		A = (activationRecord *) A->staticlink;
+	}
+
+	return false;
+}
+
+// retorna verdadeiro se existe a variavel na tabela de simbolos atual, falso caso contrario.
+bool findSymbolOneScope(symbol variable){
+
+	for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
 		if(it->istemp == false && it->name == variable.name){
 			return true;
 		}	
@@ -471,11 +504,17 @@ bool findSymbol(symbol variable){
 // retorna a variavel na tabela de simbolos correspondente ao seu nome, retorna vazio caso contrario.
 symbol getSymbol(string name){
 	symbol variable;
+	activationRecord *A = &symbolTable.top();
 
-	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
-		if(it->istemp == false && it->name == name){
-			return *it;
-		}	
+	while(A != NULL){
+		for(auto it = A->table.begin(); it != A->table.end(); ++it){
+			if(it->istemp == false && it->name == name){
+				cout << "encotrou" << endl;
+				return *it;
+			}	
+		}
+
+		A = (activationRecord *) A->staticlink;
 	}
 
 	return variable;
@@ -483,9 +522,18 @@ symbol getSymbol(string name){
 
 // exibe no terminal a tabela de simbolos no escopo atual.
 void printScope(){
-	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+	activationRecord *A = (activationRecord *) symbolTable.top().staticlink;
+
+	for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
 		cout << it->name << " | " << getEnum(it->type) << " | " << it->address <<  " | " << it->istemp << endl;
 		cout << endl;
+	}
+
+	if(symbolTable.top().staticlink != NULL){
+		for(auto it = A->table.begin(); it != A->table.end(); ++it){
+			cout << it->name << " | " << getEnum(it->type) << " | " << it->address <<  " | " << it->istemp << endl;
+			cout << endl;
+		} 
 	}
 
 	return;
@@ -513,8 +561,8 @@ void insertTable(string name, types type, string address, bool istemp){
 	variable.address = address;
 	variable.istemp = istemp;
 
-	if(!findSymbol(variable)){
-		symbolTable.top().push_back(variable);
+	if(!findSymbolOneScope(variable)){
+		symbolTable.top().table.push_back(variable);
 	}
 	else{
 		yyerror("A Variável " + variable.name + " ja foi declarada.");
