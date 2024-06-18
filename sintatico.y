@@ -74,7 +74,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
 %token TK_OP_AND TK_OP_OR
-%token TK_IF TK_ELSE TK_DO TK_WHILE
+%token TK_IF TK_ELSE TK_DO TK_WHILE TK_SCAN TK_PRINT
 %token TK_END TK_ERROR
 
 %start S
@@ -244,6 +244,15 @@ COMAND 		: E ';'
 				$$.translation += $2.translation;
 				$$.translation += "\tif (" + $5.label + ")" + " goto " + loop + ";\n";
 
+			}
+			| TK_SCAN '(' TK_ID ')' ';'
+			{
+				symbol id = getSymbol($3.label);
+
+				existInTable($3.label, $3.type);
+
+				$$.translation = $3.translation + "\t";
+				$$.translation += "cin >> " + id.address + "\n";
 			}
 			;
 
