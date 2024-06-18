@@ -252,7 +252,12 @@ COMAND 		: E ';'
 				existInTable($3.label, $3.type);
 
 				$$.translation = $3.translation + "\t";
-				$$.translation += "cin >> " + id.address + "\n";
+				$$.translation += "cin >> " + id.address + ";\n";
+			}
+			| TK_PRINT '(' E ')' ';'
+			{
+				$$.translation = $3.translation + "\t";
+				$$.translation += "cout << " + $3.label + ";\n";
 			}
 			;
 
