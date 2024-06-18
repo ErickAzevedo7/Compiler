@@ -74,7 +74,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
 %token TK_OP_AND TK_OP_OR
-%token TK_IF TK_ELSE
+%token TK_IF TK_ELSE TK_DO TK_WHILE
 %token TK_END TK_ERROR
 
 %start S
@@ -222,7 +222,7 @@ COMAND 		: E ';'
 				}
 
 				$$.translation = $3.translation + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
-				$$.translation += "\t" + $1.label + " (" + $$.label + ")" + " goto " + ELSE + ";" + "\n";
+				$$.translation += "\t" + $1.label + " (" + $$.label + ")" + " goto " + ELSE + ";\n";
 				$$.translation += $5.translation;
 				$$.translation += "\t" "go to " + end + ";\n";
 				$$.translation += "\t" + ELSE + ":\n";
@@ -230,6 +230,20 @@ COMAND 		: E ';'
 				$$.translation += "\t" + end + ":\n";
 
 				insertTable("", $$.type, $$.label, true);
+			}
+			| TK_DO BLOCK TK_WHILE '(' E ')' ';'
+			{
+				string loop = gentemplabel();
+				$$.type = $5.type;
+
+				if($$.type != t_bool){
+					yyerror($1.label + " apenas aceita o tipo bool");
+				}
+
+				$$.translation = $5.translation + "\t" + loop + ":\n";
+				$$.translation += $2.translation;
+				$$.translation += "\tif (" + $5.label + ")" + " goto " + loop + ";\n";
+
 			}
 			;
 
@@ -509,7 +523,6 @@ symbol getSymbol(string name){
 	while(Iterator != NULL){
 		for(auto it = Iterator->table.begin(); it != Iterator->table.end(); ++it){
 			if(it->istemp == false && it->name == name){
-				cout << "encotrou" << endl;
 				return *it;
 			}	
 		}
