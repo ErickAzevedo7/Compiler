@@ -474,16 +474,16 @@ void yyerror(string MSG)
 
 // retorna verdadeiro se existe a variavel em todas as tabelas de simbolos, falso caso contrario.
 bool findSymbol(symbol variable){
-	activationRecord *A = &symbolTable.top();
+	activationRecord *Iterator = &symbolTable.top();
 
-	while(A != NULL){
-		for(auto it = A->table.begin(); it != A->table.end(); ++it){
+	while(Iterator != NULL){
+		for(auto it = Iterator->table.begin(); it != Iterator->table.end(); ++it){
 			if(it->istemp == false && it->name == variable.name){
 				return true;
 			}	
 		}
 
-		A = (activationRecord *) A->staticlink;
+		Iterator = (activationRecord *) Iterator->staticlink;
 	}
 
 	return false;
@@ -504,17 +504,17 @@ bool findSymbolOneScope(symbol variable){
 // retorna a variavel na tabela de simbolos correspondente ao seu nome, retorna vazio caso contrario.
 symbol getSymbol(string name){
 	symbol variable;
-	activationRecord *A = &symbolTable.top();
+	activationRecord *Iterator = &symbolTable.top();
 
-	while(A != NULL){
-		for(auto it = A->table.begin(); it != A->table.end(); ++it){
+	while(Iterator != NULL){
+		for(auto it = Iterator->table.begin(); it != Iterator->table.end(); ++it){
 			if(it->istemp == false && it->name == name){
 				cout << "encotrou" << endl;
 				return *it;
 			}	
 		}
 
-		A = (activationRecord *) A->staticlink;
+		Iterator = (activationRecord *) Iterator->staticlink;
 	}
 
 	return variable;
@@ -522,18 +522,10 @@ symbol getSymbol(string name){
 
 // exibe no terminal a tabela de simbolos no escopo atual.
 void printScope(){
-	activationRecord *A = (activationRecord *) symbolTable.top().staticlink;
 
 	for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
 		cout << it->name << " | " << getEnum(it->type) << " | " << it->address <<  " | " << it->istemp << endl;
 		cout << endl;
-	}
-
-	if(symbolTable.top().staticlink != NULL){
-		for(auto it = A->table.begin(); it != A->table.end(); ++it){
-			cout << it->name << " | " << getEnum(it->type) << " | " << it->address <<  " | " << it->istemp << endl;
-			cout << endl;
-		} 
 	}
 
 	return;
