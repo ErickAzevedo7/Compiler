@@ -27,6 +27,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "else"      {yylval.label = yytext; return TK_ELSE;}
 "do"        {yylval.label = yytext; return TK_DO;}
 "while"     {yylval.label = yytext; return TK_WHILE;}
+"for"       {yylval.label = yytext; return TK_FOR;}
 "scan"      {yylval.label = yytext; return TK_SCAN;}
 "print"     {yylval.label = yytext; return TK_PRINT;}
 
