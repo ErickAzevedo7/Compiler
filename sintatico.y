@@ -240,10 +240,30 @@ COMAND 		: E ';'
 					yyerror($1.label + " apenas aceita o tipo bool");
 				}
 
-				$$.translation = $5.translation + "\t" + loop + ":\n";
-				$$.translation += $2.translation;
+				$$.translation = "\t" + loop + ":\n";
+				$$.translation += $5.translation + $2.translation;
 				$$.translation += "\tif (" + $5.label + ")" + " goto " + loop + ";\n";
 
+			}
+			| TK_FOR '(' E ';' E ';' E ')' BLOCK
+			{
+				string loop = gentemplabel();
+				string end = gentemplabel();
+				$$.label = gentempcode();
+				$$.type = $5.type;
+
+
+				$$.translation = $3.translation;
+				$$.translation += "\t" + loop + ":\n";
+				$$.translation += $5.translation;
+				$$.translation += "\t" + $$.label + " = " + "!" + $5.label + ";\n";
+				$$.translation += "\tif (" + $$.label + ")" + " goto " + end + ";\n";
+				$$.translation += $9.translation;
+				$$.translation += $7.translation;
+				$$.translation += "\tgoto " + loop + ";\n";
+				$$.translation += "\t" + end + ":\n";
+
+				insertTable("", $$.type, $$.label, true);
 			}
 			| TK_SCAN '(' TK_ID ')' ';'
 			{
