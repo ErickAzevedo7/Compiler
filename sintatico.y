@@ -68,7 +68,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
 %token TK_OP_AND TK_OP_OR
-%token TK_IF TK_ELSE
+%token TK_IF TK_ELSE TK_WHILE
 %token TK_END TK_ERROR
 
 %start S
@@ -192,6 +192,18 @@ COMAND 		: E ';'
 				$$.translation += "\t" "go to " + end + ";\n";
 				$$.translation += "\t" + ELSE + ":\n";
 				$$.translation += $7.translation;
+				$$.translation += "\t" + end + ":\n";
+			}
+			| TK_WHILE '(' E ')' BLOCK
+			{
+				string end = gentemplabel();
+
+				if($3.type != t_bool){
+					yyerror($1.label + " apenas aceita o tipo bool");
+				}
+
+				$$.translation = $3.translation + "\t" + $1.label + " (!" + $3.label + ")" + "{" + " go to " + end + ";}" + "\n";
+				$$.translation += $5.translation;
 				$$.translation += "\t" + end + ":\n";
 			}
 			;
