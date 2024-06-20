@@ -194,19 +194,20 @@ COMAND 		: E ';'
 				$$.translation += $7.translation;
 				$$.translation += "\t" + end + ":\n";
 			}
-			| TK_WHILE '(' E ')' BLOCK
+			TK_WHILE '(' E ')' BLOCK
 			{
-				string end = gentemplabel();
+				string loop = gentemplabel();
+				$$.type = $5.type;
 
-				if($3.type != t_bool){
+				if($$.type != t_bool){
 					yyerror($1.label + " apenas aceita o tipo bool");
 				}
 
-				$$.translation = $3.translation + "\t" + $1.label + " (!" + $3.label + ")" + "{" + " go to " + end + ";}" + "\n";
+				$$.translation = $3.translation + "\t" + loop + ":\n";
 				$$.translation += $5.translation;
-				$$.translation += "\t" + end + ":\n";
+				$$.translation += "\tif (" + $3.label + ")" + " goto " + loop + ";\n";
+
 			}
-			;
 
 E 			: '(' E ')'
 			{
