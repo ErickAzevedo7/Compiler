@@ -36,11 +36,6 @@ typedef struct{
 }symbol;
 
 typedef struct{
-	void *staticlink;
-	list <symbol> table;
-}activationRecord;
-
-typedef struct{
 	types parameter1;
 	types parameter2;
 	string operation;
@@ -52,12 +47,11 @@ map<string, comparison> comparisonTable;
 
 list <symbol> global;
 
-stack< activationRecord > symbolTable;
+stack< list<symbol> > symbolTable;
 
 int yylex(void);
 void yyerror(string);
 bool findSymbol(symbol);
-bool findSymbolOneScope(symbol);
 symbol getSymbol(string);
 void insertTable(string, types, string, bool);
 void existInTable(string, types);
@@ -74,8 +68,10 @@ attributes relationalOperator(attributes, attributes, attributes);
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
 %token TK_OP_AND TK_OP_OR
-%token TK_IF TK_ELSE TK_DO TK_WHILE TK_SCAN TK_PRINT
+%token TK_IF TK_ELSE TK_WHILE TK_DO
 %token TK_END TK_ERROR
+%token TK_PRINT TK_SCAN
+%token TK_PLUS TK_MINUS
 
 %start S
 
@@ -101,7 +97,7 @@ S 			: COMANDS
 								"#define False 0\n"
 								"int main(void) {\n";
 
-				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
+				for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
 					code += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
 				}
 								
@@ -114,26 +110,9 @@ S 			: COMANDS
 			}
 			;
 
-BEGIN_BLOCK : '{'
+BLOCK		: '{' COMANDS '}'
 			{
-				activationRecord newActivationRecord;
-				list<symbol> block;
-				newActivationRecord.staticlink = &symbolTable.top();
-				newActivationRecord.table = block;
-
-				symbolTable.push(newActivationRecord);
-				$$.translation = "";
-			}
-
-BLOCK		: BEGIN_BLOCK COMANDS '}'
-			{
-				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
-					$$.translation += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
-				}
-
-				printScope();
-				$$.translation += $2.translation;
-				symbolTable.pop();
+				$$.translation = $2.translation;
 			}
 			| COMAND
 			{
@@ -142,10 +121,6 @@ BLOCK		: BEGIN_BLOCK COMANDS '}'
 			;
 
 COMANDS		: COMAND COMANDS
-			{
-				$$.translation = $1.translation + $2.translation;
-			}
-			| BLOCK COMANDS
 			{
 				$$.translation = $1.translation + $2.translation;
 			}
@@ -196,42 +171,32 @@ COMAND 		: E ';'
 			| TK_IF '(' E ')' BLOCK
 			{
 				string end = gentemplabel();
-				$$.label = gentempcode();
-				$$.type = $3.type;
 
-				if($$.type != t_bool){
+				if($3.type != t_bool){
 					yyerror($1.label + " apenas aceita o tipo bool");
 				}
 
-				$$.translation = $3.translation + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
-				$$.translation += "\t" + $1.label + " (" + $$.label + ")" + " goto " + end + ";" + "\n";
+				$$.translation = $3.translation + "\t" + $1.label + " (!" + $3.label + ")" + "{" + " go to " + end + ";}" + "\n";
 				$$.translation += $5.translation;
 				$$.translation += "\t" + end + ":\n";
-
-				insertTable("", $$.type, $$.label, true);
 			}
 			| TK_IF '(' E ')' BLOCK TK_ELSE BLOCK
 			{
 				string ELSE = gentemplabel();
 				string end = gentemplabel();
-				$$.label = gentempcode();
-				$$.type = $3.type;
 
-				if($$.type != t_bool){
+				if($3.type != t_bool){
 					yyerror($1.label + " apenas aceita o tipo bool");
 				}
 
-				$$.translation = $3.translation + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
-				$$.translation += "\t" + $1.label + " (" + $$.label + ")" + " goto " + ELSE + ";\n";
+				$$.translation = $3.translation + "\t" + $1.label + " (!" + $3.label + ")" + "{" + " go to " + ELSE + ";}" + "\n";
 				$$.translation += $5.translation;
 				$$.translation += "\t" "go to " + end + ";\n";
 				$$.translation += "\t" + ELSE + ":\n";
 				$$.translation += $7.translation;
 				$$.translation += "\t" + end + ":\n";
-
-				insertTable("", $$.type, $$.label, true);
 			}
-			| TK_DO BLOCK TK_WHILE '(' E ')' ';'
+			TK_WHILE '(' E ')' BLOCK
 			{
 				string loop = gentemplabel();
 				$$.type = $5.type;
@@ -240,26 +205,11 @@ COMAND 		: E ';'
 					yyerror($1.label + " apenas aceita o tipo bool");
 				}
 
-				$$.translation = $5.translation + "\t" + loop + ":\n";
-				$$.translation += $2.translation;
-				$$.translation += "\tif (" + $5.label + ")" + " goto " + loop + ";\n";
+				$$.translation = $3.translation + "\t" + loop + ":\n";
+				$$.translation += $5.translation;
+				$$.translation += "\tif (" + $3.label + ")" + " goto " + loop + ";\n";
 
 			}
-			| TK_SCAN '(' TK_ID ')' ';'
-			{
-				symbol id = getSymbol($3.label);
-
-				existInTable($3.label, $3.type);
-
-				$$.translation = $3.translation + "\t";
-				$$.translation += "cin >> " + id.address + ";\n";
-			}
-			| TK_PRINT '(' E ')' ';'
-			{
-				$$.translation = $3.translation + "\t";
-				$$.translation += "cout << " + $3.label + ";\n";
-			}
-			;
 
 E 			: '(' E ')'
 			{
@@ -275,6 +225,19 @@ E 			: '(' E ')'
 				$$.translation = $4.translation + "\t" + $$.label + " = " + "(" + getEnum($2.type) + ") " + $4.label + ";\n";
 
 				insertTable("", $$.type, $$.label, true);	
+			}
+			| E TK_PLUS
+			{
+				if($1.type != t_int && $1.type != t_float){
+					yyerror($1.label + " apenas aceita o tipo inteiro");
+				}
+				else{
+					$$.label = gentempcode();
+
+					$$.translation = $1.translation + "\t" + $$.label + " = " + $1.label + " + 1;\n";
+
+					insertTable("", $$.type, $$.label, true);
+				}
 			}
 			| E '+' E
 			{
@@ -351,8 +314,6 @@ E 			: '(' E ')'
 				$$.label = id.address;
 				$$.type = id.type;
 
-				existInTable($1.label, $1.type);
-
 				types resultType = findComparison($$.type, $3.type, $2.label);
 
 				if(resultType == null){
@@ -365,6 +326,8 @@ E 			: '(' E ')'
 				else{
 					$$.translation = $1.translation + $3.translation + "\t" + id.address + " = " + $3.label + ";\n";
 				}
+					
+				existInTable($1.label, $1.type);
 
 			}
 			| TK_NUM
@@ -418,12 +381,10 @@ int yyparse();
 
 int main(int argc, char* argv[])
 {
-	activationRecord first;
+	symbolTable.push(global);
+	list <symbol> main;
 
-	first.table = global;
-	first.staticlink = NULL;
-
-	symbolTable.push(first);
+	symbolTable.push(main);
 
 	/* adding operators type rules */
 	comparisonTable["= (int-int)"] = {t_int, t_int, "=", t_int, 1};
@@ -500,27 +461,9 @@ void yyerror(string MSG)
 	exit (0);
 }
 
-// retorna verdadeiro se existe a variavel em todas as tabelas de simbolos, falso caso contrario.
+// retorna verdadeiro se existe a variavel na tabela de simbolos, falso caso contrario.
 bool findSymbol(symbol variable){
-	activationRecord *Iterator = &symbolTable.top();
-
-	while(Iterator != NULL){
-		for(auto it = Iterator->table.begin(); it != Iterator->table.end(); ++it){
-			if(it->istemp == false && it->name == variable.name){
-				return true;
-			}	
-		}
-
-		Iterator = (activationRecord *) Iterator->staticlink;
-	}
-
-	return false;
-}
-
-// retorna verdadeiro se existe a variavel na tabela de simbolos atual, falso caso contrario.
-bool findSymbolOneScope(symbol variable){
-
-	for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
 		if(it->istemp == false && it->name == variable.name){
 			return true;
 		}	
@@ -532,16 +475,11 @@ bool findSymbolOneScope(symbol variable){
 // retorna a variavel na tabela de simbolos correspondente ao seu nome, retorna vazio caso contrario.
 symbol getSymbol(string name){
 	symbol variable;
-	activationRecord *Iterator = &symbolTable.top();
 
-	while(Iterator != NULL){
-		for(auto it = Iterator->table.begin(); it != Iterator->table.end(); ++it){
-			if(it->istemp == false && it->name == name){
-				return *it;
-			}	
-		}
-
-		Iterator = (activationRecord *) Iterator->staticlink;
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
+		if(it->istemp == false && it->name == name){
+			return *it;
+		}	
 	}
 
 	return variable;
@@ -549,8 +487,7 @@ symbol getSymbol(string name){
 
 // exibe no terminal a tabela de simbolos no escopo atual.
 void printScope(){
-
-	for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
+	for(auto it = symbolTable.top().begin(); it != symbolTable.top().end(); ++it){
 		cout << it->name << " | " << getEnum(it->type) << " | " << it->address <<  " | " << it->istemp << endl;
 		cout << endl;
 	}
@@ -580,8 +517,8 @@ void insertTable(string name, types type, string address, bool istemp){
 	variable.address = address;
 	variable.istemp = istemp;
 
-	if(!findSymbolOneScope(variable)){
-		symbolTable.top().table.push_back(variable);
+	if(!findSymbol(variable)){
+		symbolTable.top().push_back(variable);
 	}
 	else{
 		yyerror("A Variável " + variable.name + " ja foi declarada.");

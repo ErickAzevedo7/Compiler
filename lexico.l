@@ -48,6 +48,9 @@ ID {LETRA}({LETRA}|{NUM})*
 "=="        {yylval.label = yytext; return TK_OP_EQUAL; }
 "!="        {yylval.label = yytext; return TK_OP_DIF; }
 
+"++"        {yylval.label = yytext; return TK_PLUS; }
+"--"        {yylval.label = yytext; return TK_MINUS; }
+
  /* logic operators */
 [!]         {yylval.label = yytext; return *yytext; }
 "&&"        {yylval.label = yytext; return TK_OP_AND; }
