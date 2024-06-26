@@ -317,9 +317,8 @@ COMAND 		: E ';'
 					$$.translation += it->second.translation;
 					$$.translation += translation.translation;
 					$$.translation += "\tif (" + translation.label + ") goto " + it->second.label + ";\n";
-
-
 				}
+				
 				map<string, attributes>::iterator it = switchCase.top().find("default");
 				if(it != switchCase.top().end()){
 					$$.translation += "\tgoto " + it->second.label + ";\n";
