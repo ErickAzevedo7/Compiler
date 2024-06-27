@@ -25,6 +25,9 @@ ID {LETRA}({LETRA}|{NUM})*
  /* comands */
 "if"        {yylval.label = yytext; return TK_IF;}
 "else"      {yylval.label = yytext; return TK_ELSE;}
+"switch"    {yylval.label = yytext; return TK_SWITCH;}
+"case"      {yylval.label = yytext; return TK_CASE;}
+"default"   {yylval.label = yytext; return TK_DEFAULT;}
 "do"        {yylval.label = yytext; return TK_DO;}
 "while"     {yylval.label = yytext; return TK_WHILE;}
 "scan"      {yylval.label = yytext; return TK_SCAN;}
