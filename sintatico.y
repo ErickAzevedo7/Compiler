@@ -48,6 +48,10 @@ typedef struct{
 	bool orderMatters;
 }comparison;
 
+map<string, attributes> cases;
+ 
+stack<map<string, attributes>> switchCase;
+
 map<string, comparison> comparisonTable;
 
 list <symbol> global;
@@ -59,6 +63,7 @@ void yyerror(string);
 bool findSymbol(symbol);
 bool findSymbolOneScope(symbol);
 symbol getSymbol(string);
+symbol getSymbolAddress(string);
 void insertTable(string, types, string, bool);
 void existInTable(string, types);
 void printScope();
@@ -74,7 +79,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
 %token TK_OP_AND TK_OP_OR
-%token TK_IF TK_ELSE TK_DO TK_WHILE TK_FOR TK_SCAN TK_PRINT
+%token TK_IF TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO TK_WHILE TK_FOR TK_SCAN TK_PRINT
 %token TK_END TK_ERROR
 
 %start S
@@ -121,6 +126,19 @@ BEGIN_BLOCK : '{'
 				newActivationRecord.staticlink = &symbolTable.top();
 				newActivationRecord.table = block;
 
+				symbolTable.push(newActivationRecord);
+				$$.translation = "";
+			}
+
+BEGIN_SWITCH: '{'
+			{
+				map<string, attributes> switchInstance;
+				activationRecord newActivationRecord;
+				list<symbol> block;
+				newActivationRecord.staticlink = &symbolTable.top();
+				newActivationRecord.table = block;
+
+				switchCase.push(switchInstance);
 				symbolTable.push(newActivationRecord);
 				$$.translation = "";
 			}
@@ -181,6 +199,43 @@ TYPE 		: TK_TYPE_INT
 			}
 			;
 
+CASES		: CASE CASES
+ 			{
+				$$.label = $2.label;
+
+				$$.translation = $1.translation;
+				$$.translation += "\tgoto " + $$.label + ";\n";
+				$$.translation += $2.translation;
+			}
+			| TK_DEFAULT ':' COMANDS
+			{
+				$$.label = gentemplabel();
+				string caseLabel = gentemplabel();
+
+				switchCase.top()["default"] = {caseLabel};
+				$$.translation = "\t" + caseLabel + ":\n";
+				$$.translation += $3.translation;
+				$$.translation += "\tgoto " + $$.label + ";\n";
+			}
+			|
+			{
+				$$.label = gentemplabel();
+				$$.translation = "";
+			}
+			;
+
+CASE		: TK_CASE E ':' COMANDS
+			{
+				string caseLabel = gentemplabel();
+				$$.type = $2.type;
+
+				switchCase.top()[$2.label] = {caseLabel, $2.translation};
+
+				$$.translation = "\t" + caseLabel + ":\n"; 
+				$$.translation += $4.translation;
+			}
+			;
+
 COMAND 		: E ';'
 			{
 				$$ = $1;
@@ -204,7 +259,7 @@ COMAND 		: E ';'
 				}
 
 				$$.translation = $3.translation + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
-				$$.translation += "\t" + $1.label + " (" + $$.label + ")" + " goto " + end + ";" + "\n";
+				$$.translation += "\t" + $1.label + " (" + $$.label + ")" + " goto " + end + ";\n";
 				$$.translation += $5.translation;
 				$$.translation += "\t" + end + ":\n";
 
@@ -230,6 +285,49 @@ COMAND 		: E ';'
 				$$.translation += "\t" + end + ":\n";
 
 				insertTable("", $$.type, $$.label, true);
+			}
+			| TK_SWITCH '(' TK_ID ')' BEGIN_SWITCH CASES '}'
+			{
+				string test = gentemplabel();
+
+				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
+					$$.translation += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
+				}
+
+				$$.translation += "\tgoto " + test + ";\n";
+				$$.translation += $6.translation;
+				$$.translation += "\t" + test + ":\n";
+
+				for(auto it = switchCase.top().begin(); it != switchCase.top().end(); ++it){
+					if(it->first == "default")
+						continue;
+
+					symbol id1 = getSymbol($3.label);
+					symbol id2 = getSymbolAddress(it->first);
+					attributes translation;
+
+					attributes temp1 = {$3.label, "", id1.type};
+					attributes temp2 = {"=="};
+					attributes temp3 = {it->first, "", id2.type};
+
+					translation = relationalOperator(temp1, temp2, temp3);
+					symbol id3 = getSymbolAddress(translation.label);
+					
+					$$.translation += "\t" + getEnum(id3.type) + " " + id3.address + "; " + "//" + id3.name + "\n" ;
+					$$.translation += it->second.translation;
+					$$.translation += translation.translation;
+					$$.translation += "\tif (" + translation.label + ") goto " + it->second.label + ";\n";
+				}
+				
+				map<string, attributes>::iterator it = switchCase.top().find("default");
+				if(it != switchCase.top().end()){
+					$$.translation += "\tgoto " + it->second.label + ";\n";
+				}
+
+				$$.translation += "\t" + $6.label + ":\n";
+
+				symbolTable.pop();
+				switchCase.pop();
 			}
 			| TK_DO BLOCK TK_WHILE '(' E ')' ';'
 			{
@@ -557,6 +655,24 @@ symbol getSymbol(string name){
 	while(Iterator != NULL){
 		for(auto it = Iterator->table.begin(); it != Iterator->table.end(); ++it){
 			if(it->istemp == false && it->name == name){
+				return *it;
+			}	
+		}
+
+		Iterator = (activationRecord *) Iterator->staticlink;
+	}
+
+	return variable;
+}
+
+// retorna a variavel na tabela de simbolos correspondente ao seu enderesso, retorna vazio caso contrario.
+symbol getSymbolAddress(string address){
+	symbol variable;
+	activationRecord *Iterator = &symbolTable.top();
+
+	while(Iterator != NULL){
+		for(auto it = Iterator->table.begin(); it != Iterator->table.end(); ++it){
+			if(it->address == address){
 				return *it;
 			}	
 		}
