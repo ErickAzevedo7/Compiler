@@ -32,6 +32,7 @@ ID {LETRA}({LETRA}|{NUM})*
 "while"     {yylval.label = yytext; return TK_WHILE;}
 "scan"      {yylval.label = yytext; return TK_SCAN;}
 "print"     {yylval.label = yytext; return TK_PRINT;}
+"break"     {yylval.label = yytext; return TK_BREAK;}
 
  /* variables types */
 "int"		{return TK_TYPE_INT;}
