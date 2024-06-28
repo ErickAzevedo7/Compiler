@@ -375,7 +375,7 @@ COMAND 		: E ';'
 			| TK_BREAK ';'
 			{
 				if(labelTable.empty()){
-				 	yyerror("não eh possivel usar o comando break fora de um while.");
+				 	yyerror("não eh possivel usar o comando break fora de um loop ou switch.");
 				}
 
 				$$.translation = "\tgoto " + labelTable.top()["break"] + ";\n";
