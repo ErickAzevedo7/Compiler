@@ -132,8 +132,6 @@ BEGIN_BLOCK : '{'
 
 BEGIN_SWITCH: '{'
 			{
-				string end = gentemplabel();
-
 				map<string, attributes> switchInstance;
 				map<string, string> whileInstance;
 				activationRecord newActivationRecord;
@@ -145,14 +143,12 @@ BEGIN_SWITCH: '{'
 				switchCase.push(switchInstance);
 				symbolTable.push(newActivationRecord);
 
-				labelTable.top()["break"] = end;
+				labelTable.top()["break"] = gentemplabel();
 				$$.translation = "";
 			}
 
 BEGIN_WHILE : '{'
-			{
-				string end = gentemplabel();
-
+			{ 
 				map<string, string> whileInstance;
 				activationRecord newActivationRecord;
 				list<symbol> block;
@@ -162,7 +158,8 @@ BEGIN_WHILE : '{'
 				labelTable.push(whileInstance);
 				symbolTable.push(newActivationRecord);
 
-				labelTable.top()["break"] = end;
+				labelTable.top()["break"] = gentemplabel();
+				labelTable.top()["continue"] = gentemplabel();
 				$$.translation = "";
 			}
 
@@ -352,7 +349,8 @@ COMAND 		: E ';'
 			}
 			| TK_DO BEGIN_WHILE COMANDS '}' TK_WHILE '(' E ')' ';'
 			{
-				string loop = gentemplabel();
+				string loop = labelTable.top()["continue"];
+				string end = labelTable.top()["break"];
 
 				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
 					$$.translation += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
@@ -367,19 +365,11 @@ COMAND 		: E ';'
 				$$.translation += "\t" + loop + ":\n";
 				$$.translation += $7.translation + $3.translation;
 				$$.translation += "\tif (" + $7.label + ")" + " goto " + loop + ";\n";
-				$$.translation += "\t" + labelTable.top()["break"] + ":\n";
+				$$.translation += "\t" + end + ":\n";
 
 				symbolTable.pop();
 				labelTable.pop();
 			}
-			| TK_BREAK ';'
-			{
-				if(labelTable.empty()){
-				 	yyerror("não eh possivel usar o comando break fora de um loop ou switch.");
-				}
-
-				$$.translation = "\tgoto " + labelTable.top()["break"] + ";\n";
-			} 
 			| TK_FOR '(' E ';' E ';' E ')' BEGIN_WHILE COMANDS '}'
 			{
 				string loop = gentemplabel();
@@ -397,15 +387,32 @@ COMAND 		: E ';'
 				$$.translation += "\t" + loop + ":\n";
 				$$.translation += $5.translation;
 				$$.translation += "\t" + $$.label + " = " + "!" + $5.label + ";\n";
-				$$.translation += "\tif (" + $$.label + ")" + " goto " + labelTable.top()["break"] + ";\n";
+				$$.translation += "\tif (" + $$.label + ")" + " goto " + end + ";\n";
 				$$.translation += $10.translation;
+				$$.translation += "\t" + labelTable.top()["continue"] + ":\n";
 				$$.translation += $7.translation;
 				$$.translation += "\tgoto " + loop + ";\n";
-				$$.translation += "\t" + labelTable.top()["break"] + ":\n";
+				$$.translation += "\t" + end + ":\n";
 
 				symbolTable.pop();
 				labelTable.pop();
 			}
+			| TK_BREAK ';'
+			{
+				if(labelTable.empty()){
+				 	yyerror("não eh possivel usar o comando break fora de um loop ou switch.");
+				}
+
+				$$.translation = "\tgoto " + labelTable.top()["break"] + ";\n";
+			}
+			| TK_CONTINUE ';'
+			{ 
+				if(labelTable.empty()){
+				 	yyerror("não eh possivel usar o comando continue fora de um loop.");
+				}
+
+				$$.translation = "\tgoto " + labelTable.top()["continue"] + ";\n";
+			} 
 			| TK_SCAN '(' TK_ID ')' ';'
 			{
 				symbol id = getSymbol($3.label);
