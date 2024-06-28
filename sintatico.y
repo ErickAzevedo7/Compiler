@@ -132,27 +132,37 @@ BEGIN_BLOCK : '{'
 
 BEGIN_SWITCH: '{'
 			{
+				string end = gentemplabel();
+
 				map<string, attributes> switchInstance;
+				map<string, string> whileInstance;
 				activationRecord newActivationRecord;
 				list<symbol> block;
 				newActivationRecord.staticlink = &symbolTable.top();
 				newActivationRecord.table = block;
 
+				labelTable.push(whileInstance);
 				switchCase.push(switchInstance);
 				symbolTable.push(newActivationRecord);
+
+				labelTable.top()["break"] = end;
 				$$.translation = "";
 			}
 
 BEGIN_WHILE : '{'
 			{
-				map<string, attributes> whileInstance;
+				string end = gentemplabel();
+
+				map<string, string> whileInstance;
 				activationRecord newActivationRecord;
 				list<symbol> block;
 				newActivationRecord.staticlink = &symbolTable.top();
 				newActivationRecord.table = block;
 
-				switchCase.push(whileInstance);
+				labelTable.push(whileInstance);
 				symbolTable.push(newActivationRecord);
+
+				labelTable.top()["break"] = end;
 				$$.translation = "";
 			}
 
@@ -214,21 +224,18 @@ TYPE 		: TK_TYPE_INT
 
 CASES		: CASE CASES
  			{
-				$$.label = $2.label;
-
 				$$.translation = $1.translation;
-				$$.translation += "\tgoto " + $$.label + ";\n";
+				$$.translation += "\tgoto " + labelTable.top()["break"] + ";\n";
 				$$.translation += $2.translation;
 			}
 			| TK_DEFAULT ':' COMANDS
 			{
-				$$.label = gentemplabel();
 				string caseLabel = gentemplabel();
 
 				switchCase.top()["default"] = {caseLabel};
 				$$.translation = "\t" + caseLabel + ":\n";
 				$$.translation += $3.translation;
-				$$.translation += "\tgoto " + $$.label + ";\n";
+				$$.translation += "\tgoto " + labelTable.top()["break"] + ";\n";
 			}
 			|
 			{
@@ -337,8 +344,9 @@ COMAND 		: E ';'
 					$$.translation += "\tgoto " + it->second.label + ";\n";
 				}
 
-				$$.translation += "\t" + $6.label + ":\n";
+				$$.translation += "\t" + labelTable.top()["break"] + ":\n";
 
+				labelTable.pop();
 				symbolTable.pop();
 				switchCase.pop();
 			}
@@ -359,29 +367,44 @@ COMAND 		: E ';'
 				$$.translation += "\t" + loop + ":\n";
 				$$.translation += $7.translation + $3.translation;
 				$$.translation += "\tif (" + $7.label + ")" + " goto " + loop + ";\n";
+				$$.translation += "\t" + labelTable.top()["break"] + ":\n";
 
 				symbolTable.pop();
-
+				labelTable.pop();
 			}
-			| TK_FOR '(' E ';' E ';' E ')' BLOCK
+			| TK_BREAK ';'
+			{
+				if(labelTable.empty()){
+				 	yyerror("não eh possivel usar o comando break fora de um while.");
+				}
+
+				$$.translation = "\tgoto " + labelTable.top()["break"] + ";\n";
+			} 
+			| TK_FOR '(' E ';' E ';' E ')' BEGIN_WHILE COMANDS '}'
 			{
 				string loop = gentemplabel();
-				string end = gentemplabel();
+				string end = labelTable.top()["break"];
 				$$.label = gentempcode();
 				$$.type = $5.type;
+				
+				insertTable("", $$.type, $$.label, true);
 
+				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
+					$$.translation += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
+				}
 
-				$$.translation = $3.translation;
+				$$.translation += $3.translation;
 				$$.translation += "\t" + loop + ":\n";
 				$$.translation += $5.translation;
 				$$.translation += "\t" + $$.label + " = " + "!" + $5.label + ";\n";
-				$$.translation += "\tif (" + $$.label + ")" + " goto " + end + ";\n";
-				$$.translation += $9.translation;
+				$$.translation += "\tif (" + $$.label + ")" + " goto " + labelTable.top()["break"] + ";\n";
+				$$.translation += $10.translation;
 				$$.translation += $7.translation;
 				$$.translation += "\tgoto " + loop + ";\n";
-				$$.translation += "\t" + end + ":\n";
+				$$.translation += "\t" + labelTable.top()["break"] + ":\n";
 
-				insertTable("", $$.type, $$.label, true);
+				symbolTable.pop();
+				labelTable.pop();
 			}
 			| TK_SCAN '(' TK_ID ')' ';'
 			{
