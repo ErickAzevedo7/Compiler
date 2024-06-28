@@ -194,18 +194,22 @@ COMAND 		: E ';'
 				$$.translation += $7.translation;
 				$$.translation += "\t" + end + ":\n";
 			}
-			TK_WHILE '(' E ')' BLOCK
+			| TK_WHILE '(' E ')' BLOCK
 			{
 				string loop = gentemplabel();
-				$$.type = $5.type;
+				string end = gentemplabel();
+				$$.label = gentempcode();
+				$$.type = $3.type;
 
-				if($$.type != t_bool){
-					yyerror($1.label + " apenas aceita o tipo bool");
-				}
-
-				$$.translation = $3.translation + "\t" + loop + ":\n";
+				$$.translation = "\t" + loop + ":\n";
+				$$.translation += $3.translation;
+				$$.translation += "\t" + $$.label + " = !" + $3.label + ";\n";
+				$$.translation += "\tif (" + $$.label + ")" + " goto " + end + ";\n";
 				$$.translation += $5.translation;
-				$$.translation += "\tif (" + $3.label + ")" + " goto " + loop + ";\n";
+				$$.translation += "\tgoto " + loop + ";\n";
+				$$.translation += "\t" + end + ":\n";
+				
+				insertTable("", $$.type, $$.label, true);
 
 			}
 
