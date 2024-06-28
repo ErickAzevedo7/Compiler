@@ -47,10 +47,10 @@ typedef struct{
 	types action;
 	bool orderMatters;
 }comparison;
-
-map<string, attributes> cases;
  
 stack<map<string, attributes>> switchCase;
+
+stack<map<string, string>> labelTable;
 
 map<string, comparison> comparisonTable;
 
@@ -139,6 +139,19 @@ BEGIN_SWITCH: '{'
 				newActivationRecord.table = block;
 
 				switchCase.push(switchInstance);
+				symbolTable.push(newActivationRecord);
+				$$.translation = "";
+			}
+
+BEGIN_WHILE : '{'
+			{
+				map<string, attributes> whileInstance;
+				activationRecord newActivationRecord;
+				list<symbol> block;
+				newActivationRecord.staticlink = &symbolTable.top();
+				newActivationRecord.table = block;
+
+				switchCase.push(whileInstance);
 				symbolTable.push(newActivationRecord);
 				$$.translation = "";
 			}
@@ -329,18 +342,25 @@ COMAND 		: E ';'
 				symbolTable.pop();
 				switchCase.pop();
 			}
-			| TK_DO BLOCK TK_WHILE '(' E ')' ';'
+			| TK_DO BEGIN_WHILE COMANDS '}' TK_WHILE '(' E ')' ';'
 			{
 				string loop = gentemplabel();
-				$$.type = $5.type;
+
+				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
+					$$.translation += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
+				}
+
+				$$.type = $7.type;
 
 				if($$.type != t_bool){
 					yyerror($1.label + " apenas aceita o tipo bool");
 				}
 
-				$$.translation = "\t" + loop + ":\n";
-				$$.translation += $5.translation + $2.translation;
-				$$.translation += "\tif (" + $5.label + ")" + " goto " + loop + ";\n";
+				$$.translation += "\t" + loop + ":\n";
+				$$.translation += $7.translation + $3.translation;
+				$$.translation += "\tif (" + $7.label + ")" + " goto " + loop + ";\n";
+
+				symbolTable.pop();
 
 			}
 			| TK_FOR '(' E ';' E ';' E ')' BLOCK
