@@ -33,6 +33,8 @@ ID {LETRA}({LETRA}|{NUM})*
 "for"       {yylval.label = yytext; return TK_FOR;}
 "scan"      {yylval.label = yytext; return TK_SCAN;}
 "print"     {yylval.label = yytext; return TK_PRINT;}
+"break"     {yylval.label = yytext; return TK_BREAK;}
+"continue"  {yylval.label = yytext; return TK_CONTINUE;}
 
  /* variables types */
 "int"		{return TK_TYPE_INT;}

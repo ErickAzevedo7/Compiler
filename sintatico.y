@@ -47,10 +47,10 @@ typedef struct{
 	types action;
 	bool orderMatters;
 }comparison;
-
-map<string, attributes> cases;
  
 stack<map<string, attributes>> switchCase;
+
+stack<map<string, string>> labelTable;
 
 map<string, comparison> comparisonTable;
 
@@ -79,7 +79,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
 %token TK_OP_AND TK_OP_OR
-%token TK_IF TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO TK_WHILE TK_FOR TK_SCAN TK_PRINT
+%token TK_IF TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO TK_WHILE TK_FOR TK_BREAK TK_CONTINUE TK_SCAN TK_PRINT
 %token TK_END TK_ERROR
 
 %start S
@@ -133,13 +133,33 @@ BEGIN_BLOCK : '{'
 BEGIN_SWITCH: '{'
 			{
 				map<string, attributes> switchInstance;
+				map<string, string> whileInstance;
 				activationRecord newActivationRecord;
 				list<symbol> block;
 				newActivationRecord.staticlink = &symbolTable.top();
 				newActivationRecord.table = block;
 
+				labelTable.push(whileInstance);
 				switchCase.push(switchInstance);
 				symbolTable.push(newActivationRecord);
+
+				labelTable.top()["break"] = gentemplabel();
+				$$.translation = "";
+			}
+
+BEGIN_WHILE : '{'
+			{ 
+				map<string, string> whileInstance;
+				activationRecord newActivationRecord;
+				list<symbol> block;
+				newActivationRecord.staticlink = &symbolTable.top();
+				newActivationRecord.table = block;
+
+				labelTable.push(whileInstance);
+				symbolTable.push(newActivationRecord);
+
+				labelTable.top()["break"] = gentemplabel();
+				labelTable.top()["continue"] = gentemplabel();
 				$$.translation = "";
 			}
 
@@ -201,21 +221,18 @@ TYPE 		: TK_TYPE_INT
 
 CASES		: CASE CASES
  			{
-				$$.label = $2.label;
-
 				$$.translation = $1.translation;
-				$$.translation += "\tgoto " + $$.label + ";\n";
+				$$.translation += "\tgoto " + labelTable.top()["break"] + ";\n";
 				$$.translation += $2.translation;
 			}
 			| TK_DEFAULT ':' COMANDS
 			{
-				$$.label = gentemplabel();
 				string caseLabel = gentemplabel();
 
 				switchCase.top()["default"] = {caseLabel};
 				$$.translation = "\t" + caseLabel + ":\n";
 				$$.translation += $3.translation;
-				$$.translation += "\tgoto " + $$.label + ";\n";
+				$$.translation += "\tgoto " + labelTable.top()["break"] + ";\n";
 			}
 			|
 			{
@@ -324,45 +341,78 @@ COMAND 		: E ';'
 					$$.translation += "\tgoto " + it->second.label + ";\n";
 				}
 
-				$$.translation += "\t" + $6.label + ":\n";
+				$$.translation += "\t" + labelTable.top()["break"] + ":\n";
 
+				labelTable.pop();
 				symbolTable.pop();
 				switchCase.pop();
 			}
-			| TK_DO BLOCK TK_WHILE '(' E ')' ';'
+			| TK_DO BEGIN_WHILE COMANDS '}' TK_WHILE '(' E ')' ';'
 			{
-				string loop = gentemplabel();
-				$$.type = $5.type;
+				string loop = labelTable.top()["continue"];
+				string end = labelTable.top()["break"];
+
+				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
+					$$.translation += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
+				}
+
+				$$.type = $7.type;
 
 				if($$.type != t_bool){
 					yyerror($1.label + " apenas aceita o tipo bool");
 				}
 
-				$$.translation = "\t" + loop + ":\n";
-				$$.translation += $5.translation + $2.translation;
-				$$.translation += "\tif (" + $5.label + ")" + " goto " + loop + ";\n";
+				$$.translation += "\t" + loop + ":\n";
+				$$.translation += $7.translation + $3.translation;
+				$$.translation += "\tif (" + $7.label + ")" + " goto " + loop + ";\n";
+				$$.translation += "\t" + end + ":\n";
 
+				symbolTable.pop();
+				labelTable.pop();
 			}
-			| TK_FOR '(' E ';' E ';' E ')' BLOCK
+			| TK_FOR '(' E ';' E ';' E ')' BEGIN_WHILE COMANDS '}'
 			{
 				string loop = gentemplabel();
-				string end = gentemplabel();
+				string end = labelTable.top()["break"];
 				$$.label = gentempcode();
 				$$.type = $5.type;
+				
+				insertTable("", $$.type, $$.label, true);
 
+				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
+					$$.translation += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
+				}
 
-				$$.translation = $3.translation;
+				$$.translation += $3.translation;
 				$$.translation += "\t" + loop + ":\n";
 				$$.translation += $5.translation;
 				$$.translation += "\t" + $$.label + " = " + "!" + $5.label + ";\n";
 				$$.translation += "\tif (" + $$.label + ")" + " goto " + end + ";\n";
-				$$.translation += $9.translation;
+				$$.translation += $10.translation;
+				$$.translation += "\t" + labelTable.top()["continue"] + ":\n";
 				$$.translation += $7.translation;
 				$$.translation += "\tgoto " + loop + ";\n";
 				$$.translation += "\t" + end + ":\n";
 
-				insertTable("", $$.type, $$.label, true);
+				symbolTable.pop();
+				labelTable.pop();
 			}
+			| TK_BREAK ';'
+			{
+				if(labelTable.empty()){
+				 	yyerror("não eh possivel usar o comando break fora de um loop ou switch.");
+				}
+
+				$$.translation = "\tgoto " + labelTable.top()["break"] + ";\n";
+			}
+			| TK_CONTINUE ';'
+			{ 
+				if(labelTable.empty()){
+				 	yyerror("não eh possivel usar o comando continue fora de um loop.");
+				}
+
+				$$.translation = "\tgoto " + labelTable.top()["continue"] + ";\n";
+			} 
 			| TK_SCAN '(' TK_ID ')' ';'
 			{
 				symbol id = getSymbol($3.label);
