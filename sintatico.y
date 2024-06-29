@@ -347,6 +347,30 @@ COMAND 		: E ';'
 				symbolTable.pop();
 				switchCase.pop();
 			}
+			| TK_WHILE '(' E ')' BEGIN_WHILE COMANDS '}'
+			{
+				string loop = labelTable.top()["continue"];
+				string end = labelTable.top()["break"];
+				$$.label = gentempcode();
+				$$.type = $3.type;
+								
+				insertTable("", $$.type, $$.label, true);
+
+				for(auto it = symbolTable.top().table.begin(); it != symbolTable.top().table.end(); ++it){
+					$$.translation += "\t" + getEnum(it->type) + " " + it->address + "; " + "//" + it->name + "\n" ;
+				}
+
+				$$.translation += "\t" + loop + ":\n";
+				$$.translation += $3.translation;
+				$$.translation += "\t" + $$.label + " = !" + $3.label + ";\n";
+				$$.translation += "\tif (" + $$.label + ")" + " goto " + end + ";\n";
+				$$.translation += $6.translation;
+				$$.translation += "\tgoto " + loop + ";\n";
+				$$.translation += "\t" + end + ":\n";
+
+				symbolTable.pop();
+				labelTable.pop();
+			}
 			| TK_DO BEGIN_WHILE COMANDS '}' TK_WHILE '(' E ')' ';'
 			{
 				string loop = labelTable.top()["continue"];
@@ -400,7 +424,7 @@ COMAND 		: E ';'
 			| TK_BREAK ';'
 			{
 				if(labelTable.empty()){
-				 	yyerror("não eh possivel usar o comando break fora de um loop ou switch.");
+				 	yyerror("nao eh possivel usar o comando break fora de um loop ou switch.");
 				}
 
 				$$.translation = "\tgoto " + labelTable.top()["break"] + ";\n";
@@ -408,7 +432,7 @@ COMAND 		: E ';'
 			| TK_CONTINUE ';'
 			{ 
 				if(labelTable.empty()){
-				 	yyerror("não eh possivel usar o comando continue fora de um loop.");
+				 	yyerror("nao eh possivel usar o comando continue fora de um loop.");
 				}
 
 				$$.translation = "\tgoto " + labelTable.top()["continue"] + ";\n";
