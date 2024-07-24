@@ -79,6 +79,7 @@ attributes relationalOperator(attributes, attributes, attributes);
 %token TK_MAIN TK_ID TK_TYPE_INT TK_TYPE_FLOAT TK_TYPE_BOOL TK_TYPE_CHAR
 %token TK_OP_GREATER_EQUAL TK_OP_LESS_EQUAL TK_OP_EQUAL TK_OP_DIF
 %token TK_OP_AND TK_OP_OR
+%token TK_MORE TK_MINUS
 %token TK_IF TK_ELSE TK_SWITCH TK_CASE TK_DEFAULT TK_DO TK_WHILE TK_FOR TK_BREAK TK_CONTINUE TK_SCAN TK_PRINT
 %token TK_END TK_ERROR
 
@@ -519,6 +520,30 @@ E 			: '(' E ')'
 			| E TK_OP_OR E
 			{
 				$$ = binaryOperator($1, $2, $3);
+			}
+			| E TK_MORE
+			{
+				if($1.type != t_int && $1.type != t_float){
+					yyerror("não é possivel fazer a operação de " + $1.label + " com o tipo " + getEnum($2.type));
+				}
+				else{
+					$$.label = gentempcode();
+					$$.translation = $1.translation = "\t" + $$.label + " = " + "+ 1;\n";
+
+					insertTable("", $$.type, $$.label, true);
+				}
+			}
+			| E TK_MINUS
+			{
+				if($1.type != t_int && $1.type != t_float){
+					yyerror("não é possivel fazer a operação de " + $1.label + " com o tipo " + getEnum($2.type));
+				}
+				else{
+					$$.label = gentempcode();
+					$$.translation = $1.translation = "\t" + $$.label + " = " + "- 1;\n";
+
+					insertTable("", $$.type, $$.label, true);
+				}
 			}
 			|'!' E
 			{
